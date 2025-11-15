@@ -1,0 +1,8 @@
+[gd_resource type="Resource" script_class="Spell" load_steps=2 format=3 uid="uid://cjxx07cxxr1n2"]
+
+[ext_resource type="Script" uid="uid://bljpn23n2gjb3" path="res://viewmodel/spells/spell.gd" id="1_gj7i5"]
+
+[resource]
+script = ExtResource("1_gj7i5")
+spell_name = "Fireball"
+metadata/_custom_type_script = "uid://bljpn23n2gjb3"
