@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="Weapon" load_steps=4 format=3 uid="uid://ddrmcamdwy868"]
+
+[ext_resource type="Script" uid="uid://dc3teovh3x7ab" path="res://viewmodel/weapons/weapon.gd" id="1_ggfmk"]
+[ext_resource type="Script" uid="uid://bljpn23n2gjb3" path="res://viewmodel/spells/spell.gd" id="2_oy63q"]
+[ext_resource type="Resource" uid="uid://cjxx07cxxr1n2" path="res://viewmodel/spells/fireball.tres" id="3_oy63q"]
+
+[resource]
+script = ExtResource("1_ggfmk")
+weapon_name = "Test Sword"
+spell_slots = Array[ExtResource("2_oy63q")]([ExtResource("3_oy63q")])
+metadata/_custom_type_script = "uid://dc3teovh3x7ab"
