@@ -1,24 +1,24 @@
 [gd_scene load_steps=6 format=3 uid="uid://cpe4r3cy0a6en"]
 
-[ext_resource type="Texture2D" uid="uid://b4sg8joalslia" path="res://icon.svg" id="1_4flbx"]
 [ext_resource type="Script" uid="uid://bubv1hogd27m1" path="res://viewmodel/entities/player.gd" id="1_onrkg"]
+[ext_resource type="Texture2D" uid="uid://cnqpqf6maldel" path="res://assets/isaac.png" id="2_wqekw"]
 [ext_resource type="Script" uid="uid://iengamu6c1u2" path="res://viewmodel/weapons/weapon_handler.gd" id="3_a6yy2"]
 [ext_resource type="Resource" uid="uid://ddrmcamdwy868" path="res://viewmodel/weapons/test_sword.tres" id="4_wqekw"]
 
-[sub_resource type="CapsuleShape2D" id="CapsuleShape2D_onrkg"]
-radius = 66.0
-height = 132.0
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_wqekw"]
+size = Vector2(72, 134)
 
-[node name="Player" type="CharacterBody2D"]
+[node name="Player" type="CharacterBody2D" groups=["player"]]
+scale = Vector2(0.5, 0.5)
 collision_mask = 255
 script = ExtResource("1_onrkg")
 
 [node name="Sprite2D" type="Sprite2D" parent="."]
-texture = ExtResource("1_4flbx")
+scale = Vector2(4, 4)
+texture = ExtResource("2_wqekw")
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="."]
-position = Vector2(1, 0)
-shape = SubResource("CapsuleShape2D_onrkg")
+shape = SubResource("RectangleShape2D_wqekw")
 
 [node name="WeaponHandler" type="Node2D" parent="."]
 script = ExtResource("3_a6yy2")
