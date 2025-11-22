@@ -7,7 +7,7 @@ extends CharacterBody2D
 
 # --- 2. 移动常量 ---
 const SPEED = 300.0
-const JUMP_VELOCITY = -400.0
+const JUMP_VELOCITY = -500.0
 
 # --- 3. 生命值属性 ---
 @export var max_health: int = 100
