@@ -7,7 +7,7 @@ extends CharacterBody2D
 
 # --- 2. 移动常量 ---
 const SPEED = 300.0
-const JUMP_VELOCITY = -500.0
+const JUMP_VELOCITY = -400.0
 
 # --- 3. 生命值属性 ---
 @export var max_health: int = 100
@@ -28,11 +28,11 @@ func _physics_process(delta: float) -> void:
 		velocity += get_gravity() * delta
 
 	# --- 跳跃 ---
-	if Input.is_action_just_pressed("ui_accept") and is_on_floor():
+	if Input.is_action_just_pressed("jump") and is_on_floor():
 		velocity.y = JUMP_VELOCITY
 
 	# --- 左右移动 ---
-	var direction := Input.get_axis("ui_left", "ui_right")
+	var direction := Input.get_axis("move_left", "move_right")
 	if direction:
 		velocity.x = direction * SPEED
 	else:
@@ -46,6 +46,9 @@ func _physics_process(delta: float) -> void:
 	# 它只在玩家按下按键时，"命令" WeaponHandler 去执行攻击。
 	if Input.is_action_just_pressed("attack"):
 		weapon_handler.attack()
+
+	if Input.is_action_just_pressed("melee_attack"):
+		weapon_handler.melee_attack()
 
 	# --- Debug: 受伤测试 (保留) ---
 	if Input.is_action_just_pressed("debug_hurt"):

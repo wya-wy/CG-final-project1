@@ -40,3 +40,14 @@ func attack():
 			print("WeaponHandler: Unknown spell. effect_id: ", spell_data.effect_id)
 
 	EventBus.emit_signal("player_attacked", spell_data)
+
+
+func melee_attack():
+	if not equipped_weapon:
+		print("WeaponHandler: no weapon equipped!")
+		return
+		
+	print("WeaponHandler: Melee attack with ", equipped_weapon.weapon_name, " (Damage: ", equipped_weapon.melee_damage, ")")
+	# TODO: 在这里实现近战伤害判定 (例如检测 Area2D 或 RayCast2D)
+	
+	EventBus.emit_signal("player_melee_attacked")
