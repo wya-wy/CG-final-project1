@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://cnqpqf6maldel"
-path="res://.godot/imported/isaac.png-fac63b159ff4e09a65995623fe4778b6.ctex"
+uid="uid://c3na4sboldhfc"
+path="res://.godot/imported/spritesheet.png-18bbc4e2f75be45d7d845ec9709998ca.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/isaac.png"
-dest_files=["res://.godot/imported/isaac.png-fac63b159ff4e09a65995623fe4778b6.ctex"]
+source_file="res://assets/Aegir/spritesheet.png"
+dest_files=["res://.godot/imported/spritesheet.png-18bbc4e2f75be45d7d845ec9709998ca.ctex"]
 
 [params]
 

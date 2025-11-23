@@ -5,6 +5,9 @@ extends CharacterBody2D
 # ($WeaponHandler 是 Player 场景中子节点的名称)
 @onready var weapon_handler = $WeaponHandler
 
+# 新增：获取 AnimationPlayer
+@onready var animation_player = $AnimationPlayer
+
 # --- 2. 移动常量 ---
 const SPEED = 300.0
 const JUMP_VELOCITY = -400.0
@@ -50,16 +53,31 @@ func _physics_process(delta: float) -> void:
 	else:
 		velocity.x = move_toward(velocity.x, 0, SPEED)
 
+	# --- 状态优先级逻辑 ---
+	# 如果正在播放攻击动画，且动画还没播完，就不要播放跑步或待机动画
+	if animation_player.current_animation == "Attack" and animation_player.is_playing():
+		# 可以在这里选择是否允许移动，如果想攻击时定身：
+		# velocity.x = 0
+		pass 
+	else:
+		# 处理移动动画
+		if velocity.x != 0:
+			animation_player.play("run")
+		else:
+			animation_player.play("idle")
+
 	# --- 执行移动 ---
 	move_and_slide()
 
-	# --- 【关键改动】攻击输入 ---
-	# Player 脚本不再关心 "如何" 攻击。
-	# 它只在玩家按下按键时，"命令" WeaponHandler 去执行攻击。
+	# --- 攻击输入 ---
 	if Input.is_action_just_pressed("attack"):
+		# 远程攻击逻辑保持不变
 		weapon_handler.attack()
 
 	if Input.is_action_just_pressed("melee_attack"):
+		# 1. 播放动画 (动画中包含了开启 Hitbox 的逻辑)
+		animation_player.play("attack")
+		# 2. 通知 WeaponHandler (计算伤害数值等)
 		weapon_handler.melee_attack()
 
 	# --- Debug: 受伤测试 (保留) ---
