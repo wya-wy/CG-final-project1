@@ -4,6 +4,19 @@ const FIREBALL_PROJECTILE = preload("res://viewmodel/spells/fireball_projectile.
 
 @export var equipped_weapon: Weapon
 
+# 获取 Hitbox 节点引用
+# 使用 get_node_or_null 防止节点未创建时报错
+@onready var melee_hitbox: Area2D = get_node_or_null("MeleeHitbox")
+
+func _ready():
+	if melee_hitbox:
+		# 确保初始状态下 Hitbox 是关闭的
+		melee_hitbox.monitoring = false
+		# 连接碰撞信号
+		melee_hitbox.body_entered.connect(_on_melee_hitbox_body_entered)
+	else:
+		print("WeaponHandler: Warning - 'MeleeHitbox' node not found. Please add an Area2D named 'MeleeHitbox' as a child of WeaponHandler.")
+
 func attack():
 	if not equipped_weapon:
 		print("WeaponHandler: no weapon equipped!")
@@ -24,13 +37,17 @@ func attack():
 			print("WeaponHandler: FIREBALL")
 
 			var projectile = FIREBALL_PROJECTILE.instantiate()
-			projectile.velocity = Vector2(500, 0)
+			
+			# 计算朝向鼠标的方向
+			var direction = (get_global_mouse_position() - global_position).normalized()
+			projectile.velocity = direction * 1000
+			projectile.rotation = direction.angle()
 
 			# (重点) get_parent() 是 Player, get_parent().get_parent() 是 TestLevel
 			# 我们需要一个更好的方法来访问“世界”
 			# 暂时先这样，之后再优化
 			get_parent().get_parent().add_child(projectile)
-			projectile.global_position = get_parent().global_position
+			projectile.global_position = global_position
 
 		"flame_buff":
 			print("WeaponHandler: Fireball with Flame Buff!")
@@ -48,6 +65,21 @@ func melee_attack():
 		return
 		
 	print("WeaponHandler: Melee attack with ", equipped_weapon.weapon_name, " (Damage: ", equipped_weapon.melee_damage, ")")
-	# TODO: 在这里实现近战伤害判定 (例如检测 Area2D 或 RayCast2D)
+	
+	# 开启 Hitbox 进行伤害判定
+	if melee_hitbox:
+		melee_hitbox.monitoring = true
+		
+		# 模拟攻击持续时间（例如 0.1 秒）
+		# 注意：更好的做法是使用 AnimationPlayer 的 "Call Method" 轨道来精确控制开启和关闭
+		await get_tree().create_timer(0.1).timeout
+		
+		melee_hitbox.monitoring = false
 	
 	EventBus.emit_signal("player_melee_attacked")
+
+func _on_melee_hitbox_body_entered(body: Node2D):
+	# 检查碰撞体是否是敌人（是否有 take_damage 方法）
+	if body.has_method("take_damage"):
+		print("WeaponHandler: Hit enemy ", body.name)
+		body.take_damage(equipped_weapon.melee_damage)

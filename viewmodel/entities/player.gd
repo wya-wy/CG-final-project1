@@ -35,6 +35,18 @@ func _physics_process(delta: float) -> void:
 	var direction := Input.get_axis("move_left", "move_right")
 	if direction:
 		velocity.x = direction * SPEED
+		
+		# --- 视觉朝向翻转 ---
+		# 1. 翻转玩家精灵 (假设节点名为 Sprite2D)
+		var sprite = get_node_or_null("Sprite2D")
+		if sprite:
+			sprite.flip_h = (direction < 0)
+			
+		# 2. 翻转武器处理器 (用于调整近战 Hitbox 位置)
+		# 如果向左移动，将 WeaponHandler 的 X 轴缩放设为 -1
+		if weapon_handler:
+			weapon_handler.scale.x = -1 if direction < 0 else 1
+			
 	else:
 		velocity.x = move_toward(velocity.x, 0, SPEED)
 
