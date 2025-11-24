@@ -38,10 +38,13 @@ func _physics_process(delta: float) -> void:
 	
 	# --- 自动回蓝 ---
 	if current_mana < max_mana and not is_dead:
+		var old_mana_int = int(current_mana)
 		current_mana = move_toward(current_mana, max_mana, mana_regen_rate * delta)
-		# 只有整数变化时才发送信号，避免频繁更新UI
-		# (这里为了简单，你可以选择每帧更新或者变化量超过1时更新)
-		# EventBus.emit_signal("player_mana_changed", int(current_mana), max_mana) 
+		var new_mana_int = int(current_mana)
+		
+		# 只有当整数部分发生变化时才发送信号，避免每帧刷新UI
+		if old_mana_int != new_mana_int:
+			EventBus.emit_signal("player_mana_changed", new_mana_int, max_mana)
 
 	# --- 重力 ---
 	if not is_on_floor():
