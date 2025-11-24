@@ -31,6 +31,16 @@ func attack():
 		print("WeaponHandler: spell slot is empty!")
 		return
 
+	# --- 检查蓝量 ---
+	var player = get_parent() # 假设 WeaponHandler 是 Player 的直接子节点
+	if player.has_method("has_enough_mana"):
+		if not player.has_enough_mana(spell_data.mana_cost):
+			print("WeaponHandler: Not enough mana!")
+			return
+		
+		# 消耗蓝量
+		player.consume_mana(spell_data.mana_cost)
+
 	match spell_data.effect_id:
 
 		"fireball":

@@ -8,4 +8,9 @@ script = ExtResource("1_p0e6w")
 [node name="Label" type="Label" parent="."]
 offset_right = 40.0
 offset_bottom = 23.0
-text = "Health: 100/100"
+
+[node name="ManaLabel" type="Label" parent="."]
+offset_left = 8.0
+offset_top = 26.0
+offset_right = 122.0
+offset_bottom = 49.0

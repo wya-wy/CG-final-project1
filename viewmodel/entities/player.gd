@@ -10,22 +10,39 @@ extends CharacterBody2D
 
 # --- 2. 移动常量 ---
 const SPEED = 300.0
-const JUMP_VELOCITY = -400.0
+const JUMP_VELOCITY = -500.0
 
 # --- 3. 生命值属性 ---
 @export var max_health: int = 100
 var current_health: int
 var is_dead: bool = false
 
-# --- 4. 初始化 ---
-func _ready():
-	# 游戏开始时，满血
-	current_health = max_health
-	is_dead = false
+# --- 4. 魔法值属性 ---
+@export var max_mana: int = 100
+@export var mana_regen_rate: float = 5.0 # 每秒回蓝
+var current_mana: float # 使用 float 以便计算平滑回蓝
 
-# --- 5. 物理 & 输入循环 ---
+# --- 5. 初始化 ---
+func _ready():
+	# 游戏开始时，满血满蓝
+	current_health = max_health
+	current_mana = max_mana
+	is_dead = false
+	
+	# 初始化UI
+	EventBus.emit_signal("player_health_changed", current_health, max_health)
+	EventBus.emit_signal("player_mana_changed", int(current_mana), max_mana)
+
+# --- 6. 物理 & 输入循环 ---
 func _physics_process(delta: float) -> void:
 	
+	# --- 自动回蓝 ---
+	if current_mana < max_mana and not is_dead:
+		current_mana = move_toward(current_mana, max_mana, mana_regen_rate * delta)
+		# 只有整数变化时才发送信号，避免频繁更新UI
+		# (这里为了简单，你可以选择每帧更新或者变化量超过1时更新)
+		# EventBus.emit_signal("player_mana_changed", int(current_mana), max_mana) 
+
 	# --- 重力 ---
 	if not is_on_floor():
 		velocity += get_gravity() * delta
@@ -61,10 +78,16 @@ func _physics_process(delta: float) -> void:
 		pass 
 	else:
 		# 处理移动动画
-		if velocity.x != 0:
-			animation_player.play("run")
+		if velocity.y == 0:
+			if velocity.x != 0:
+				animation_player.play("run")
+			else:
+				animation_player.play("idle")
 		else:
-			animation_player.play("idle")
+			if velocity.y > 0:
+				animation_player.play("fall")
+			else:
+				animation_player.play("jump")
 
 	# --- 执行移动 ---
 	move_and_slide()
@@ -114,3 +137,11 @@ func player_died():
 	
 	# 停止玩家的物理处理和输入（死亡动画播放完毕后更佳）
 	set_physics_process(false)
+
+# --- 7. 魔法值函数 ---
+func has_enough_mana(amount: int) -> bool:
+	return current_mana >= amount
+
+func consume_mana(amount: int):
+	current_mana -= amount
+	EventBus.emit_signal("player_mana_changed", int(current_mana), max_mana)
