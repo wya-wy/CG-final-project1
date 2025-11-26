@@ -75,7 +75,7 @@ func _physics_process(delta: float) -> void:
 
 	# --- 状态优先级逻辑 ---
 	# 如果正在播放攻击动画，且动画还没播完，就不要播放跑步或待机动画
-	if animation_player.current_animation == "Attack" and animation_player.is_playing():
+	if animation_player.current_animation == "attack" and animation_player.is_playing():
 		# 可以在这里选择是否允许移动，如果想攻击时定身：
 		# velocity.x = 0
 		pass 
