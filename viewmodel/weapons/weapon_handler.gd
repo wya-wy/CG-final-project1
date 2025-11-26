@@ -69,6 +69,12 @@ func attack():
 	EventBus.emit_signal("player_attacked", spell_data)
 
 
+# 供动画调用的方法，用于控制 Hitbox 的监控状态
+func set_hitbox_monitoring(enabled: bool):
+	if melee_hitbox:
+		melee_hitbox.monitoring = enabled
+		print("WeaponHandler: Hitbox monitoring set to ", enabled)
+
 func melee_attack():
 	if not equipped_weapon:
 		print("WeaponHandler: no weapon equipped!")
@@ -76,16 +82,8 @@ func melee_attack():
 		
 	print("WeaponHandler: Melee attack with ", equipped_weapon.weapon_name, " (Damage: ", equipped_weapon.melee_damage, ")")
 	
-	# 开启 Hitbox 进行伤害判定
-	if melee_hitbox:
-		melee_hitbox.monitoring = true
-		
-		# 模拟攻击持续时间（例如 0.1 秒）
-		# 注意：更好的做法是使用 AnimationPlayer 的 "Call Method" 轨道来精确控制开启和关闭
-		await get_tree().create_timer(0.1).timeout
-		
-		melee_hitbox.monitoring = false
-	
+	# 现在 Hitbox 的开启和关闭由 AnimationPlayer 控制
+	# 这里只负责初始化攻击状态
 	EventBus.emit_signal("player_melee_attacked")
 
 func _on_melee_hitbox_body_entered(body: Node2D):
