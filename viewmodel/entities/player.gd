@@ -11,6 +11,9 @@ extends CharacterBody2D
 # --- 2. 移动常量 ---
 const SPEED = 300.0
 const JUMP_VELOCITY = -500.0
+# 土狼时间
+const COYOTE_TIME_DURATION: float = 0.15
+var coyote_timer: float = 0.0
 
 # --- 3. 生命值属性 ---
 @export var max_health: int = 100
@@ -18,41 +21,75 @@ var current_health: int
 var is_dead: bool = false
 
 # --- 4. 魔法值属性 ---
-@export var max_mana: int = 100
-@export var mana_regen_rate: float = 5.0 # 每秒回蓝
-var current_mana: float # 使用 float 以便计算平滑回蓝
+# 普通蓝量上限为 100
+@export var max_normal_mana: int = 100
+# 浓缩蓝量上限为 50
+@export var max_condensed_mana: int = 50
+@export var normal_mana_regen_rate: float = 10.0  # 回普通蓝速度
+@export var condensed_mana_regen_rate: float = 6.0  # 回浓缩蓝速度
+var normal_mana: float = 100.0
+var condensed_mana: float = 50.0
+
+# 战斗状态记录
+var last_combat_time: float = -10.0
+const COMBAT_COOLDOWN: float = 2.0  # 停止攻击2秒后开始回浓缩蓝
+
+# 获取总蓝量
+func get_total_mana() -> int:
+	return int(normal_mana + condensed_mana)
+
+# 发信号
+func emit_mana_signal():
+	EventBus.emit_signal("player_mana_changed", normal_mana, condensed_mana, max_normal_mana, max_condensed_mana)
 
 # --- 5. 初始化 ---
 func _ready():
 	# 游戏开始时，满血满蓝
 	current_health = max_health
-	current_mana = max_mana
+	normal_mana = float(max_normal_mana)
+	condensed_mana = float(max_condensed_mana)
 	is_dead = false
 	
 	# 初始化UI
 	EventBus.emit_signal("player_health_changed", current_health, max_health)
-	EventBus.emit_signal("player_mana_changed", int(current_mana), max_mana)
+	emit_mana_signal()
 
 # --- 6. 物理 & 输入循环 ---
 func _physics_process(delta: float) -> void:
 	
 	# --- 自动回蓝 ---
-	if current_mana < max_mana and not is_dead:
-		var old_mana_int = int(current_mana)
-		current_mana = move_toward(current_mana, max_mana, mana_regen_rate * delta)
-		var new_mana_int = int(current_mana)
+	if not is_dead:
+		var changed = false
 		
-		# 只有当整数部分发生变化时才发送信号，避免每帧刷新UI
-		if old_mana_int != new_mana_int:
-			EventBus.emit_signal("player_mana_changed", new_mana_int, max_mana)
+		# 1. 普通蓝：一直回复，直到 max_normal_mana
+		if normal_mana < max_normal_mana:
+			normal_mana = move_toward(normal_mana, float(max_normal_mana), normal_mana_regen_rate * delta)
+			changed = true
+			
+		# 2. 浓缩蓝：脱战后回复，直到 max_condensed_mana
+		var time_since_combat = Time.get_ticks_msec() / 1000.0 - last_combat_time
+		if time_since_combat > COMBAT_COOLDOWN:
+			if condensed_mana < max_condensed_mana:
+				condensed_mana = move_toward(condensed_mana, float(max_condensed_mana), condensed_mana_regen_rate * delta)
+				changed = true
+		
+		if changed:
+			emit_mana_signal()
+
+	# --- 土狼时间 ---
+	if is_on_floor():
+		coyote_timer = COYOTE_TIME_DURATION
+	else:
+		coyote_timer -= delta
 
 	# --- 重力 ---
 	if not is_on_floor():
 		velocity += get_gravity() * delta
 
 	# --- 跳跃 ---
-	if Input.is_action_just_pressed("jump") and is_on_floor():
+	if Input.is_action_just_pressed("jump") and coyote_timer > 0:
 		velocity.y = JUMP_VELOCITY
+		coyote_timer = 0.0
 
 	# --- 左右移动 ---
 	var direction := Input.get_axis("move_left", "move_right")
@@ -99,16 +136,22 @@ func _physics_process(delta: float) -> void:
 	if Input.is_action_just_pressed("attack"):
 		# 远程攻击逻辑保持不变
 		weapon_handler.attack()
+		update_combat_state() # 记录攻击时间
 
 	if Input.is_action_just_pressed("melee_attack"):
 		# 1. 播放动画 (动画中包含了开启 Hitbox 的逻辑)
 		animation_player.play("attack")
 		# 2. 通知 WeaponHandler (计算伤害数值等)
 		weapon_handler.melee_attack()
+		update_combat_state() # 记录攻击时间
 
 	# --- Debug: 受伤测试 (保留) ---
 	if Input.is_action_just_pressed("debug_hurt"):
 		take_damage(40)
+
+# 更新战斗状态辅助函数
+func update_combat_state():
+	last_combat_time = Time.get_ticks_msec() / 1000.0
 
 # --- 6. 生命值函数 ---
 			
@@ -142,9 +185,35 @@ func player_died():
 	set_physics_process(false)
 
 # --- 7. 魔法值函数 ---
+# type: "spell" (法术) 或 "melee" (近战/强化)
+func try_consume_mana(amount: int, type: String) -> bool:
+	if type == "spell":
+		# 法术只扣浓缩蓝
+		if condensed_mana >= amount:
+			condensed_mana -= amount
+			normal_mana -= amount
+			emit_mana_signal()
+			return true
+		return false
+		
+	elif type == "melee":
+		# 近战优先扣普通，不够扣浓缩
+		if normal_mana >= amount:
+			normal_mana -= amount
+			emit_mana_signal()
+			return true
+		elif normal_mana + condensed_mana >= amount:
+			condensed_mana -= amount - normal_mana
+			normal_mana = 0
+			emit_mana_signal()
+			return true
+		return false
+	return false
+
+# 兼容旧接口
 func has_enough_mana(amount: int) -> bool:
-	return current_mana >= amount
+	return get_total_mana() >= amount
 
 func consume_mana(amount: int):
-	current_mana -= amount
-	EventBus.emit_signal("player_mana_changed", int(current_mana), max_mana)
+	# 默认当作近战类型消耗
+	try_consume_mana(amount, "melee")

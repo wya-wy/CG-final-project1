@@ -1,4 +1,4 @@
-[gd_scene load_steps=4 format=3 uid="uid://baqbwdbpkjts8"]
+[gd_scene load_steps=6 format=3 uid="uid://baqbwdbpkjts8"]
 
 [ext_resource type="Script" uid="uid://dm58rmdto83ke" path="res://view/UI/hud.gd" id="1_p0e6w"]
 
@@ -6,6 +6,11 @@
 bg_color = Color(1, 0, 0, 1)
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_c63mr"]
+bg_color = Color(0, 1, 1, 1)
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_1fyl7"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_rpx20"]
 bg_color = Color(0, 0, 1, 1)
 
 [node name="HUD" type="CanvasLayer"]
@@ -28,9 +33,17 @@ offset_right = 250.0
 offset_bottom = 77.0
 theme_override_styles/fill = SubResource("StyleBoxFlat_prlgg")
 
-[node name="ManaBar" type="ProgressBar" parent="."]
+[node name="ManaBarTotal" type="ProgressBar" parent="."]
 offset_left = 50.0
 offset_top = 100.0
 offset_right = 250.0
 offset_bottom = 127.0
 theme_override_styles/fill = SubResource("StyleBoxFlat_c63mr")
+
+[node name="ManaBarCondensed" type="ProgressBar" parent="."]
+offset_left = 50.0
+offset_top = 100.0
+offset_right = 250.0
+offset_bottom = 127.0
+theme_override_styles/background = SubResource("StyleBoxEmpty_1fyl7")
+theme_override_styles/fill = SubResource("StyleBoxFlat_rpx20")

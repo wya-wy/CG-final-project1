@@ -33,13 +33,9 @@ func attack():
 
 	# --- 检查蓝量 ---
 	var player = get_parent() # 假设 WeaponHandler 是 Player 的直接子节点
-	if player.has_method("has_enough_mana"):
-		if not player.has_enough_mana(spell_data.mana_cost):
-			print("WeaponHandler: Not enough mana!")
-			return
-		
-		# 消耗蓝量
-		player.consume_mana(spell_data.mana_cost)
+	if player.has_method("try_consume_mana"):
+		if not player.try_consume_mana(spell_data.mana_cost, "spell"):
+			return 
 
 	match spell_data.effect_id:
 
@@ -56,7 +52,7 @@ func attack():
 			# (重点) get_parent() 是 Player, get_parent().get_parent() 是 TestLevel
 			# 我们需要一个更好的方法来访问“世界”
 			# 暂时先这样，之后再优化
-			get_parent().get_parent().add_child(projectile)
+			get_tree().current_scene.add_child(projectile)
 			projectile.global_position = global_position
 
 		"flame_buff":
