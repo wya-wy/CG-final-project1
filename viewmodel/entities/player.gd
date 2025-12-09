@@ -10,9 +10,11 @@ extends CharacterBody2D
 
 # --- 2. 移动常量 ---
 const SPEED = 300.0
+const ACCELERATION = 2400.0
+const FRICTION = 1200.0
 const JUMP_VELOCITY = -500.0
 # 土狼时间
-const COYOTE_TIME_DURATION: float = 0.15
+const COYOTE_TIME_DURATION: float = 0.1
 var coyote_timer: float = 0.0
 
 # --- 3. 生命值属性 ---
@@ -94,7 +96,7 @@ func _physics_process(delta: float) -> void:
 	# --- 左右移动 ---
 	var direction := Input.get_axis("move_left", "move_right")
 	if direction:
-		velocity.x = direction * SPEED
+		velocity.x = move_toward(velocity.x, direction * SPEED, ACCELERATION * delta)
 		
 		# --- 视觉朝向翻转 ---
 		# 1. 翻转玩家精灵 (假设节点名为 Sprite2D)
@@ -108,7 +110,7 @@ func _physics_process(delta: float) -> void:
 			weapon_handler.scale.x = -1 if direction < 0 else 1
 			
 	else:
-		velocity.x = move_toward(velocity.x, 0, SPEED)
+		velocity.x = move_toward(velocity.x, 0, FRICTION * delta)
 
 	# --- 状态优先级逻辑 ---
 	# 如果正在播放攻击动画，且动画还没播完，就不要播放跑步或待机动画
@@ -119,7 +121,7 @@ func _physics_process(delta: float) -> void:
 	else:
 		# 处理移动动画
 		if velocity.y == 0:
-			if velocity.x != 0:
+			if direction != 0:
 				animation_player.play("run")
 			else:
 				animation_player.play("idle")
