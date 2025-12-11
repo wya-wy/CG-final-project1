@@ -1,0 +1,7 @@
+[gd_resource type="Resource" script_class="DoubleSlot" load_steps=2 format=3 uid="uid://bgqewel553p"]
+
+[ext_resource type="Script" uid="uid://b3mdftdw5reep" path="res://viewmodel/weapons/slots/double_slot.gd" id="1_6vikk"]
+
+[resource]
+script = ExtResource("1_6vikk")
+metadata/_custom_type_script = "uid://b3mdftdw5reep"

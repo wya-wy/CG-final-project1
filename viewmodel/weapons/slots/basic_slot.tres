@@ -1,0 +1,7 @@
+[gd_resource type="Resource" script_class="SpellSlot" load_steps=2 format=3 uid="uid://j2lpbpjbp3i1"]
+
+[ext_resource type="Script" uid="uid://cb5usrtsdh3ii" path="res://viewmodel/weapons/slots/spell_slot.gd" id="1_sfcmm"]
+
+[resource]
+script = ExtResource("1_sfcmm")
+metadata/_custom_type_script = "uid://cb5usrtsdh3ii"

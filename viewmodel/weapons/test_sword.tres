@@ -1,11 +1,12 @@
-[gd_resource type="Resource" script_class="Weapon" load_steps=4 format=3 uid="uid://ddrmcamdwy868"]
+[gd_resource type="Resource" script_class="Weapon" load_steps=5 format=3 uid="uid://ddrmcamdwy868"]
 
 [ext_resource type="Script" uid="uid://dc3teovh3x7ab" path="res://viewmodel/weapons/weapon.gd" id="1_ggfmk"]
-[ext_resource type="Script" uid="uid://bljpn23n2gjb3" path="res://viewmodel/spells/spell.gd" id="2_oy63q"]
-[ext_resource type="Resource" uid="uid://cjxx07cxxr1n2" path="res://viewmodel/spells/fireball.tres" id="3_oy63q"]
+[ext_resource type="Script" uid="uid://cb5usrtsdh3ii" path="res://viewmodel/weapons/slots/spell_slot.gd" id="2_cvp52"]
+[ext_resource type="Resource" path="res://viewmodel/weapons/slots/basic_slot.tres" id="3_43c6r"]
+[ext_resource type="Resource" uid="uid://bgqewel553p" path="res://viewmodel/weapons/slots/double_slot.tres" id="4_o6bbp"]
 
 [resource]
 script = ExtResource("1_ggfmk")
 weapon_name = "Test Sword"
-spell_slots = Array[ExtResource("2_oy63q")]([ExtResource("3_oy63q")])
+slots = Array[ExtResource("2_cvp52")]([ExtResource("3_43c6r"), ExtResource("4_o6bbp")])
 metadata/_custom_type_script = "uid://dc3teovh3x7ab"
