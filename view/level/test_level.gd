@@ -1,6 +1,9 @@
 extends Node2D
 
 func _ready():
+	$LevelGenerator.level_generated.connect(_on_level_generated)
+	$LevelGenerator.generate_level()
+
 	EventBus.player_attacked.connect(_on_player_attacked)
 	
 	# --- 模拟：游戏开始时，NPC 给了玩家一个火球术装在第一个槽 ---
@@ -23,3 +26,10 @@ func _on_player_attacked(spell: Spell):
 	print("--- TestLevel Listening ---")
 	print("EventBus: Player uses ", spell.spell_name)
 	print("-----------------------------")
+
+func _on_level_generated(start_pos: Vector2):
+	# 将玩家移动到起点
+	$Player.position = start_pos + Vector2(960, 540) # 假设居中，或者读取 SpawnPoint
+	
+	# 重置摄像机限制（如果需要）
+	# $Player/Camera2D.reset_smoothing()

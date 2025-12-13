@@ -9,13 +9,13 @@ extends Camera2D
 
 # Called when the node enters the scene tree for the first time.
 func _ready() -> void:
-	pass # Replace with function body.
-
+	# 启用内置的位置平滑，替代之前的 lerp 代码
+	position_smoothing_enabled = true
+	position_smoothing_speed = 5.0
 
 # Called every frame. 'delta' is the elapsed time since the previous frame.
 func _process(delta: float) -> void:
-	var target_pos = $"../Player".position
-	# 应用垂直偏移
-	target_pos.y += vertical_offset
-	
-	position = position.lerp(target_pos, delta * 5)
+	# 作为子节点，摄像机会自动跟随玩家。
+	# 我们只需要设置本地坐标的 Y 值来实现垂直偏移。
+	position.x = 0 # 保持水平居中
+	position.y = vertical_offset

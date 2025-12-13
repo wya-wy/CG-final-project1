@@ -1,9 +1,10 @@
-[gd_scene load_steps=14 format=3 uid="uid://cpe4r3cy0a6en"]
+[gd_scene load_steps=15 format=3 uid="uid://cpe4r3cy0a6en"]
 
 [ext_resource type="Script" uid="uid://bubv1hogd27m1" path="res://viewmodel/entities/player.gd" id="1_onrkg"]
 [ext_resource type="Texture2D" uid="uid://c3na4sboldhfc" path="res://assets/Aegir/spritesheet.png" id="2_wqekw"]
 [ext_resource type="Script" uid="uid://iengamu6c1u2" path="res://viewmodel/weapons/weapon_handler.gd" id="3_a6yy2"]
 [ext_resource type="Resource" uid="uid://ddrmcamdwy868" path="res://viewmodel/weapons/test_sword.tres" id="4_wqekw"]
+[ext_resource type="Script" uid="uid://c633a8guk8k7c" path="res://view/camera/camera_2d.gd" id="5_biy1m"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_wqekw"]
 size = Vector2(72, 105.5)
@@ -201,3 +202,7 @@ libraries = {
 &"": SubResource("AnimationLibrary_6ef4u")
 }
 autoplay = "fall"
+
+[node name="Camera2D" type="Camera2D" parent="."]
+position = Vector2(0, 6)
+script = ExtResource("5_biy1m")
