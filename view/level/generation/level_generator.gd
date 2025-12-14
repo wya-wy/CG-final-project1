@@ -2,8 +2,8 @@ class_name LevelGenerator
 extends Node
 
 @export_category("Generation Settings")
-@export var grid_width: int = 32
-@export var grid_height: int = 32
+@export var grid_width: int = 0
+@export var grid_height: int = 0
 @export var cell_size: Vector2 = Vector2(1920, 1080) # 你的房间像素大小
 @export var max_rooms: int = 15
 @export var min_rooms: int = 8
@@ -71,8 +71,8 @@ func _generate_layout():
 	var walker_pos = current_pos
 	var main_path = [current_pos]
 	
-	# 1. 强制第一步向右 (Force Right)
-	# 这样保证起点房间（如果只有右出口）一定能接上
+	# 强制第一步向右 (Force Right)
+	# 这样保证起点房间（只有右出口）一定能接上
 	var first_dir = Vector2i.RIGHT
 	var first_new_pos = walker_pos + first_dir
 	
@@ -84,7 +84,7 @@ func _generate_layout():
 	else:
 		push_error("Grid is too small or start pos is at edge, cannot go RIGHT!")
 	
-	# 2. 继续随机游走
+	# 继续随机游走
 	var attempts = 0
 	while main_path.size() < min_rooms and attempts < 100:
 		attempts += 1

@@ -1,9 +1,7 @@
-[gd_scene load_steps=21 format=3 uid="uid://sc4dl4jl0sh1"]
+[gd_scene load_steps=19 format=3 uid="uid://sc4dl4jl0sh1"]
 
 [ext_resource type="Script" uid="uid://cjwi40r15wpmq" path="res://view/level/test_level.gd" id="1_bqxk0"]
 [ext_resource type="PackedScene" uid="uid://cpe4r3cy0a6en" path="res://viewmodel/entities/player.tscn" id="2_yoqnf"]
-[ext_resource type="Texture2D" uid="uid://b4sg8joalslia" path="res://icon.svg" id="4_0rq3q"]
-[ext_resource type="Script" uid="uid://bgvgvqlrlarss" path="res://viewmodel/entities/enemy.gd" id="4_bqxk0"]
 [ext_resource type="PackedScene" uid="uid://cufbutcy8lxb1" path="res://view/level/rooms/room_D_L_R.tscn" id="6_pwnfm"]
 [ext_resource type="Script" uid="uid://dyglslmi8m0fr" path="res://view/level/generation/level_generator.gd" id="7_ahbgl"]
 [ext_resource type="PackedScene" uid="uid://c70k6kgagjbqi" path="res://view/level/rooms/room_D_L.tscn" id="8_pwnfm"]
@@ -14,46 +12,19 @@
 [ext_resource type="PackedScene" uid="uid://beopg2dp86dv6" path="res://view/level/rooms/room_U_D_L.tscn" id="12_qpth3"]
 [ext_resource type="PackedScene" uid="uid://dvyrusqx31eka" path="res://view/level/rooms/room_U_D_R.tscn" id="13_yonmn"]
 [ext_resource type="PackedScene" uid="uid://r5ydrxm7mxv1" path="res://view/level/rooms/room_U_L.tscn" id="14_fhgnf"]
+[ext_resource type="PackedScene" uid="uid://uycrj0wc51j5" path="res://view/level/rooms/room_U.tscn" id="14_pwnfm"]
 [ext_resource type="PackedScene" uid="uid://bv0gdvvjujyma" path="res://view/level/rooms/room_U_L_R.tscn" id="14_tgbmd"]
+[ext_resource type="PackedScene" uid="uid://bfeedy3qeyrr5" path="res://view/level/rooms/room_D.tscn" id="15_smd4k"]
 [ext_resource type="PackedScene" uid="uid://kxeg0jlsmlea" path="res://view/level/rooms/room_U_R.tscn" id="15_ui306"]
 [ext_resource type="PackedScene" uid="uid://neujsoiktwtv" path="res://view/level/rooms/room_R.tscn" id="16_khgg8"]
 [ext_resource type="PackedScene" uid="uid://d0naba81ceahe" path="res://view/level/rooms/room_L.tscn" id="17_wlngx"]
 
-[sub_resource type="RectangleShape2D" id="RectangleShape2D_yoqnf"]
-size = Vector2(120, 122)
-
-[sub_resource type="RectangleShape2D" id="RectangleShape2D_sv5ul"]
-size = Vector2(80, 33)
-
 [node name="TestLevel" type="Node2D"]
 script = ExtResource("1_bqxk0")
 
-[node name="Enemy" type="CharacterBody2D" parent="."]
-position = Vector2(3496, 1017)
-collision_layer = 4
-script = ExtResource("4_bqxk0")
-
-[node name="Sprite2D" type="Sprite2D" parent="Enemy"]
-modulate = Color(0.7963782, 0, 0.050830953, 1)
-scale = Vector2(0.5, 0.5)
-texture = ExtResource("4_0rq3q")
-
-[node name="CollisionShape2D" type="CollisionShape2D" parent="Enemy"]
-scale = Vector2(0.5, 0.5)
-shape = SubResource("RectangleShape2D_yoqnf")
-
-[node name="AttackHitbox" type="Area2D" parent="Enemy"]
-position = Vector2(10, 14.5)
-collision_layer = 0
-collision_mask = 2
-
-[node name="CollisionShape2D" type="CollisionShape2D" parent="Enemy/AttackHitbox"]
-shape = SubResource("RectangleShape2D_sv5ul")
-debug_color = Color(1, 0, 0, 0.41960785)
-
 [node name="LevelGenerator" type="Node" parent="."]
 script = ExtResource("7_ahbgl")
-room_scenes = Array[PackedScene]([ExtResource("8_pwnfm"), ExtResource("6_pwnfm"), ExtResource("9_smd4k"), ExtResource("10_tgbmd"), ExtResource("11_uvi14"), ExtResource("12_qpth3"), ExtResource("11_smd4k"), ExtResource("13_yonmn"), ExtResource("14_fhgnf"), ExtResource("14_tgbmd"), ExtResource("15_ui306")])
+room_scenes = Array[PackedScene]([ExtResource("8_pwnfm"), ExtResource("6_pwnfm"), ExtResource("9_smd4k"), ExtResource("10_tgbmd"), ExtResource("11_uvi14"), ExtResource("12_qpth3"), ExtResource("11_smd4k"), ExtResource("13_yonmn"), ExtResource("14_fhgnf"), ExtResource("14_tgbmd"), ExtResource("15_ui306"), ExtResource("14_pwnfm"), ExtResource("15_smd4k")])
 start_room = ExtResource("16_khgg8")
 end_room = ExtResource("17_wlngx")
 

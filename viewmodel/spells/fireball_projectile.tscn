@@ -8,6 +8,7 @@ radius = 69.0
 height = 138.0
 
 [node name="fireball_projectile" type="Area2D"]
+z_index = 3
 collision_layer = 2
 collision_mask = 4
 script = ExtResource("1_yes51")
