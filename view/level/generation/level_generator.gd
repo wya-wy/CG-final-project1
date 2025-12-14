@@ -2,8 +2,8 @@ class_name LevelGenerator
 extends Node
 
 @export_category("Generation Settings")
-@export var grid_width: int = 0
-@export var grid_height: int = 0
+@export var grid_width: int = 16
+@export var grid_height: int = 16
 @export var cell_size: Vector2 = Vector2(1920, 1080) # 你的房间像素大小
 @export var max_rooms: int = 15
 @export var min_rooms: int = 8
