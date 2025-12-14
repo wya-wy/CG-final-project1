@@ -40,3 +40,6 @@ func activate(handler: Node2D, player: CharacterBody2D):
 	
 	# 默认行为：只释放第一个
 	handler.spawn_projectile(_equipped_spells[0])
+
+func get_equipped_spells() -> Array[Spell]:
+	return _equipped_spells

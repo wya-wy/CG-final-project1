@@ -1,0 +1,19 @@
+[gd_scene load_steps=3 format=3 uid="uid://cm4ogrnftni34"]
+
+[ext_resource type="Script" uid="uid://bbpcb7jpfge84" path="res://view/UI/weapon_slot_ui.gd" id="1_wy6mi"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_ijlut"]
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+
+[node name="WeaponSlotUi" type="PanelContainer"]
+theme_override_styles/panel = SubResource("StyleBoxFlat_ijlut")
+script = ExtResource("1_wy6mi")
+
+[node name="IconsContainer" type="HBoxContainer" parent="."]
+layout_mode = 2
+
+[node name="SlotNameLabel" type="Label" parent="."]
+layout_mode = 2

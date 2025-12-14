@@ -1,0 +1,9 @@
+[gd_scene load_steps=2 format=3 uid="uid://cwt6bs446vmiu"]
+
+[ext_resource type="Script" uid="uid://dw0ik6gmpbvlw" path="res://inventory_item.gd" id="1_5wodm"]
+
+[node name="InventoryItem" type="TextureRect"]
+custom_minimum_size = Vector2(64, 64)
+expand_mode = 1
+stretch_mode = 4
+script = ExtResource("1_5wodm")
