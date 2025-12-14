@@ -77,7 +77,31 @@ func attack():
 		print("WeaponHandler: Weapon has no slots!")
 		return
 
-	# 1. 获取当前轮到的槽位
+	# --- 新增逻辑：寻找下一个有法术的槽位 ---
+	# 目的：跳过空的槽位，实现 1-1-1 的连发效果
+	var found_valid_slot = false
+	var checked_count = 0
+	
+	# 最多循环检查一圈（防止所有槽都空导致死循环）
+	while checked_count < runtime_weapon.slots.size():
+		var slot = runtime_weapon.slots[current_slot_index]
+		
+		# 检查：这个槽位里装了东西吗？
+		# 注意：需要确保你的 SpellSlot 脚本里已经加了 get_equipped_spells() 函数
+		if slot.has_method("get_equipped_spells") and not slot.get_equipped_spells().is_empty():
+			found_valid_slot = true
+			break # 找到了！这就用它，跳出循环
+		
+		# 没装东西 -> 索引+1，继续找下一个
+		current_slot_index = (current_slot_index + 1) % runtime_weapon.slots.size()
+		checked_count += 1
+	
+	# 如果转了一圈发现全是空的，那就直接返回，不执行攻击
+	if not found_valid_slot:
+		return
+	# ----------------------------------------
+
+	# 1. 获取当前找到的有效槽位
 	# 注意：这里的 slots 数组里装的是 SpellSlot 资源 (如 SpellSlot 或 DoubleSlot)
 	var current_slot = runtime_weapon.slots[current_slot_index]
 	
@@ -99,7 +123,7 @@ func attack():
 	if current_slot.has_method("activate"):
 		current_slot.activate(self, player)
 	
-	# 5. 轮换到下一个槽位
+	# 5. 只有在成功发射后，才把索引移到下一位，为下一次点击做准备
 	current_slot_index = (current_slot_index + 1) % runtime_weapon.slots.size()
 
 
