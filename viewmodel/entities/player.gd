@@ -36,6 +36,9 @@ var condensed_mana: float = 50.0
 var last_combat_time: float = -10.0
 const COMBAT_COOLDOWN: float = 2.0  # 停止攻击2秒后开始回浓缩蓝
 
+@export_category("Debug")
+@export var debug_infinite_air_jump: bool = false
+
 # 获取总蓝量
 func get_total_mana() -> int:
 	return int(normal_mana + condensed_mana)
@@ -89,9 +92,13 @@ func _physics_process(delta: float) -> void:
 		velocity += get_gravity() * delta
 
 	# --- 跳跃 ---
-	if Input.is_action_just_pressed("jump") and coyote_timer > 0:
-		velocity.y = JUMP_VELOCITY
-		coyote_timer = 0.0
+	if Input.is_action_just_pressed("jump"):
+		var can_jump := coyote_timer > 0
+		if debug_infinite_air_jump and OS.is_debug_build():
+			can_jump = true
+		if can_jump:
+			velocity.y = JUMP_VELOCITY
+			coyote_timer = 0.0
 
 	# --- 左右移动 ---
 	var direction := Input.get_axis("move_left", "move_right")

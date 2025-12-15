@@ -1,6 +1,7 @@
-[gd_scene load_steps=20 format=3 uid="uid://sc4dl4jl0sh1"]
+[gd_scene load_steps=24 format=3 uid="uid://sc4dl4jl0sh1"]
 
 [ext_resource type="Script" uid="uid://cjwi40r15wpmq" path="res://view/level/test_level.gd" id="1_bqxk0"]
+[ext_resource type="Texture2D" uid="uid://dcthm3w2ubv7t" path="res://assets/tileset/Tileset3/Dungeon Tile Set/Dungeon Tile Set.png" id="2_qpth3"]
 [ext_resource type="PackedScene" uid="uid://cpe4r3cy0a6en" path="res://viewmodel/entities/player.tscn" id="2_yoqnf"]
 [ext_resource type="PackedScene" uid="uid://cufbutcy8lxb1" path="res://view/level/rooms/room_D_L_R.tscn" id="6_pwnfm"]
 [ext_resource type="Script" uid="uid://dyglslmi8m0fr" path="res://view/level/generation/level_generator.gd" id="7_ahbgl"]
@@ -18,29 +19,40 @@
 [ext_resource type="PackedScene" uid="uid://kxeg0jlsmlea" path="res://view/level/rooms/room_U_R.tscn" id="15_ui306"]
 [ext_resource type="PackedScene" uid="uid://neujsoiktwtv" path="res://view/level/rooms/room_R.tscn" id="16_khgg8"]
 [ext_resource type="PackedScene" uid="uid://d0naba81ceahe" path="res://view/level/rooms/room_L.tscn" id="17_wlngx"]
+[ext_resource type="PackedScene" uid="uid://bj5ol1d2kcqnq" path="res://view/level/rooms/room_Start.tscn" id="18_tgbmd"]
 [ext_resource type="PackedScene" uid="uid://1t1mtlont2y6" path="res://view/UI/InventoryMenu.tscn" id="19_smd4k"]
+[ext_resource type="PackedScene" uid="uid://cvhn3flbavkwd" path="res://view/level/rooms/room_End.tscn" id="19_uvi14"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_qpth3"]
+atlas = ExtResource("2_qpth3")
+region = Rect2(32.50302, 32.170692, 13.576115, 14.666164)
 
 [node name="TestLevel" type="Node2D"]
 script = ExtResource("1_bqxk0")
 
+[node name="Parallax2D" type="Parallax2D" parent="."]
+repeat_size = Vector2(2000, 2000)
+
+[node name="TextureRect" type="TextureRect" parent="Parallax2D"]
+offset_right = 2000.0
+offset_bottom = 2000.0
+texture = SubResource("AtlasTexture_qpth3")
+stretch_mode = 1
+
 [node name="LevelGenerator" type="Node" parent="."]
 script = ExtResource("7_ahbgl")
-room_scenes = Array[PackedScene]([ExtResource("8_pwnfm"), ExtResource("6_pwnfm"), ExtResource("9_smd4k"), ExtResource("10_tgbmd"), ExtResource("11_uvi14"), ExtResource("12_qpth3"), ExtResource("11_smd4k"), ExtResource("13_yonmn"), ExtResource("14_fhgnf"), ExtResource("14_tgbmd"), ExtResource("15_ui306"), ExtResource("14_pwnfm"), ExtResource("15_smd4k")])
-start_room = ExtResource("16_khgg8")
-end_room = ExtResource("17_wlngx")
+room_scenes = Array[PackedScene]([ExtResource("8_pwnfm"), ExtResource("6_pwnfm"), ExtResource("9_smd4k"), ExtResource("10_tgbmd"), ExtResource("11_uvi14"), ExtResource("12_qpth3"), ExtResource("11_smd4k"), ExtResource("13_yonmn"), ExtResource("14_fhgnf"), ExtResource("14_tgbmd"), ExtResource("15_ui306"), ExtResource("14_pwnfm"), ExtResource("15_smd4k"), ExtResource("17_wlngx"), ExtResource("16_khgg8")])
+start_room = ExtResource("18_tgbmd")
+end_room = ExtResource("19_uvi14")
+debug_generation = true
 
 [node name="Player" parent="." instance=ExtResource("2_yoqnf")]
 z_index = 8
-position = Vector2(1947, 552)
 scale = Vector2(1, 1)
 collision_layer = 2
+debug_infinite_air_jump = true
 
 [node name="MenuLayer" type="CanvasLayer" parent="."]
 layer = 10
 
 [node name="InventoryMenu" parent="MenuLayer" instance=ExtResource("19_smd4k")]
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2

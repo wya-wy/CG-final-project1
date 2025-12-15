@@ -1,0 +1,132 @@
+[gd_scene load_steps=19 format=3 uid="uid://bjfb7uj4y0bi4"]
+
+[ext_resource type="Script" uid="uid://bgvgvqlrlarss" path="res://viewmodel/entities/enemy.gd" id="1_cdhfu"]
+[ext_resource type="Texture2D" uid="uid://50u35virrjj4" path="res://assets/enemies/toad/Spritesheets/mutant-toad-attack.png" id="2_577pw"]
+[ext_resource type="Texture2D" uid="uid://c53aq5mlk3xnk" path="res://assets/enemies/toad/Spritesheets/mutant-toad-idle.png" id="3_6gfq6"]
+[ext_resource type="Texture2D" uid="uid://cbfey3pyb5iye" path="res://assets/enemies/toad/Spritesheets/mutant-toad-jump.png" id="4_ay4mu"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_2yjat"]
+size = Vector2(92, 69)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_bmyid"]
+size = Vector2(64, 27)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_ikrvg"]
+atlas = ExtResource("2_577pw")
+region = Rect2(0, 0, 80, 64)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_rybqy"]
+atlas = ExtResource("2_577pw")
+region = Rect2(80, 0, 80, 64)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_wlgji"]
+atlas = ExtResource("2_577pw")
+region = Rect2(160, 0, 80, 64)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_ohdd2"]
+atlas = ExtResource("3_6gfq6")
+region = Rect2(0, 0, 80, 64)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_v6jcc"]
+atlas = ExtResource("3_6gfq6")
+region = Rect2(80, 0, 80, 64)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_wkq0x"]
+atlas = ExtResource("3_6gfq6")
+region = Rect2(160, 0, 80, 64)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_15kld"]
+atlas = ExtResource("3_6gfq6")
+region = Rect2(240, 0, 80, 64)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_rc6de"]
+atlas = ExtResource("4_ay4mu")
+region = Rect2(0, 0, 80, 64)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_mhj5a"]
+atlas = ExtResource("4_ay4mu")
+region = Rect2(80, 0, 80, 64)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_6a8gu"]
+atlas = ExtResource("4_ay4mu")
+region = Rect2(160, 0, 80, 64)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_tys0u"]
+atlas = ExtResource("4_ay4mu")
+region = Rect2(240, 0, 80, 64)
+
+[sub_resource type="SpriteFrames" id="SpriteFrames_w34dj"]
+animations = [{
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_ikrvg")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_rybqy")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_wlgji")
+}],
+"loop": true,
+"name": &"attack",
+"speed": 5.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_ohdd2")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_v6jcc")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_wkq0x")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_15kld")
+}],
+"loop": true,
+"name": &"idle",
+"speed": 10.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_rc6de")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_mhj5a")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_6a8gu")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_tys0u")
+}],
+"loop": true,
+"name": &"jump",
+"speed": 10.0
+}]
+
+[node name="Enemy" type="CharacterBody2D"]
+z_index = 2
+collision_layer = 4
+script = ExtResource("1_cdhfu")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+position = Vector2(-2, 13.25)
+scale = Vector2(0.5, 0.5)
+shape = SubResource("RectangleShape2D_2yjat")
+
+[node name="AttackHitbox" type="Area2D" parent="."]
+position = Vector2(10, 14.5)
+collision_layer = 0
+collision_mask = 2
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="AttackHitbox"]
+position = Vector2(-1, 3)
+shape = SubResource("RectangleShape2D_bmyid")
+debug_color = Color(1, 0, 0, 0.41960785)
+
+[node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="."]
+sprite_frames = SubResource("SpriteFrames_w34dj")
+animation = &"attack"
+frame_progress = 0.7964796

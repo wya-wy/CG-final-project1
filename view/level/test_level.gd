@@ -29,7 +29,7 @@ func _on_player_attacked(spell: Spell):
 
 func _on_level_generated(start_pos: Vector2):
 	# 将玩家移动到起点
-	$Player.position = start_pos + Vector2(960, 540) # 假设居中，或者读取 SpawnPoint
+	$Player.global_position = start_pos + Vector2(960, 540) # 假设居中，或者读取 SpawnPoint
 	
 	# 重置摄像机限制（如果需要）
 	# $Player/Camera2D.reset_smoothing()

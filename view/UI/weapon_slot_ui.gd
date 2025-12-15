@@ -30,7 +30,10 @@ func refresh_visuals():
 	
 	for spell in spells:
 		var icon = TextureRect.new()
-		icon.texture = preload("res://icon.svg") # 临时占位，以后用 spell.icon
+		if spell.icon:
+			icon.texture = spell.icon
+		else:
+			icon.texture = preload("res://icon.svg")
 		icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		icon.custom_minimum_size = Vector2(40, 40)
 		icons_container.add_child(icon)

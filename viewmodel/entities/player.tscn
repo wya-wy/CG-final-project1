@@ -7,7 +7,7 @@
 [ext_resource type="Script" uid="uid://c633a8guk8k7c" path="res://view/camera/camera_2d.gd" id="5_biy1m"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_wqekw"]
-size = Vector2(72, 105.5)
+size = Vector2(34, 105.5)
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_biy1m"]
 size = Vector2(149, 42)
@@ -181,7 +181,7 @@ vframes = 16
 frame = 40
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="."]
-position = Vector2(0, -5.25)
+position = Vector2(-3, -5.25)
 shape = SubResource("RectangleShape2D_wqekw")
 
 [node name="WeaponHandler" type="Node2D" parent="."]

@@ -20,6 +20,9 @@ extends Node
 @export var start_room: PackedScene
 @export var end_room: PackedScene
 
+@export_category("Debug")
+@export var debug_generation: bool = false
+
 # 内部网格数据：Vector2i -> Dictionary
 # Dictionary 包含: { "type": "normal", "exits": [Vector2i.UP, ...] }
 var grid: Dictionary = {}
@@ -102,9 +105,41 @@ func _generate_layout():
 				# 这里简单处理：如果撞到，就从当前撞到的位置继续尝试
 				walker_pos = new_pos
 	
-	# 标记终点
-	var end_pos = main_path.back()
-	grid[end_pos]["type"] = "end"
+	# --- 修正终点生成逻辑 ---
+	# 你的终点房间只有左出口（入口），这意味着它必须位于某个房间的【右边】。
+	# 且终点房间不能有其他连接。
+	
+	var end_placed = false
+	# 优先尝试：直接在当前路径末端往右延伸
+	var last_pos = main_path.back()
+	var try_pos = last_pos + Vector2i.RIGHT
+	
+	if _is_in_bounds(try_pos) and not grid.has(try_pos):
+		grid[try_pos] = { "type": "end", "exits": [] }
+		_connect_rooms(last_pos, try_pos, Vector2i.RIGHT)
+		main_path.append(try_pos)
+		end_placed = true
+	else:
+		# 备选方案：如果末端右边被堵住或出界，从路径末尾往回找，
+		# 找到第一个“右边是空位”的房间，在那里生成终点。
+		print("End room cannot be placed at end of path, backtracking...")
+		for i in range(main_path.size() - 1, -1, -1):
+			var curr = main_path[i]
+			var candidate = curr + Vector2i.RIGHT
+			if _is_in_bounds(candidate) and not grid.has(candidate):
+				grid[candidate] = { "type": "end", "exits": [] }
+				_connect_rooms(curr, candidate, Vector2i.RIGHT)
+				main_path.append(candidate) # 将终点加入路径列表末尾
+				end_placed = true
+				print("End room placed at branch: ", candidate)
+				break
+	
+	if not end_placed:
+		push_error("CRITICAL: Could not place End Room with LEFT entrance! Grid too small or crowded.")
+		# 极端情况兜底：把最后一个房间强行设为终点（可能会导致出口不匹配，但比崩溃好）
+		var fallback_end = main_path.back()
+		grid[fallback_end]["type"] = "end"
+
 	print("Main path generated. Length: ", main_path.size())
 	
 	# --- 第二步：生成回环 (Loops) ---
@@ -253,12 +288,11 @@ func _instantiate_rooms():
 			
 			push_error("MISSING ROOM TYPE! Need exits: [" + missing_exits_str + "] at " + str(pos))
 
-	# 找到起点房间的位置 (移到循环外)
+	# 找到起点房间的位置
 	for pos in grid:
 		if grid[pos]["type"] == "start":
 			var start_world_pos = Vector2(pos.x * cell_size.x, pos.y * cell_size.y)
-			# 假设起点房间中心就是出生点，或者你可以加个偏移量
-			# 更好的做法是在 StartRoom 场景里放一个 Marker2D 叫 "SpawnPoint"
+			# 假设起点房间中心就是出生点，或者可以加个偏移量
 			emit_signal("level_generated", start_world_pos)
 			break
 
@@ -274,6 +308,10 @@ func _find_matching_room(required_exits: Array) -> Node2D:
 		var candidates = room_cache[key]
 		if candidates.size() > 0:
 			return candidates[rng.randi() % candidates.size()].instantiate()
+		elif debug_generation:
+			print("[LevelGenerator] Room cache empty for key=", key, " required_exits=", required_exits)
+	elif debug_generation:
+		print("[LevelGenerator] Room cache missing key=", key, " required_exits=", required_exits)
 	
 	return null
 

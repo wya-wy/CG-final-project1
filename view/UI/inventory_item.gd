@@ -7,10 +7,11 @@ var spell_data: Spell
 
 func setup(spell: Spell):
 	spell_data = spell
-	# 这里假设你的 Spell 资源里将来会有 icon 属性
-	# 目前先用 Godot 图标或者颜色代替
-	# texture = spell.icon 
-	texture = preload("res://icon.svg") # 临时占位图
+	# 如果法术资源配置了图标，则使用配置的图标，否则使用默认占位图
+	if spell.icon:
+		texture = spell.icon
+	else:
+		texture = preload("res://icon.svg") # 临时占位图
 	
 	# 如果想显示法术名字作为提示
 	tooltip_text = spell.spell_name
