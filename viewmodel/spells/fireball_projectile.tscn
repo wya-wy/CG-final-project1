@@ -450,8 +450,8 @@ animations = [{
 }]
 
 [sub_resource type="CapsuleShape2D" id="CapsuleShape2D_hutsr"]
-radius = 69.0
-height = 138.0
+radius = 24.0
+height = 52.0
 
 [node name="fireball_projectile" type="Area2D"]
 z_index = 3
@@ -467,11 +467,13 @@ process_material = SubResource("ParticleProcessMaterial_fire")
 
 [node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="."]
 rotation = 3.1415927
+scale = Vector2(2, 2)
 sprite_frames = SubResource("SpriteFrames_fire")
 autoplay = "default"
 frame_progress = 0.39344102
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+position = Vector2(57, 0)
 scale = Vector2(0.5, 0.5)
 shape = SubResource("CapsuleShape2D_hutsr")
 
