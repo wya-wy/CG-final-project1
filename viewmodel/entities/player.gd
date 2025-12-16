@@ -65,9 +65,16 @@ func _ready():
 
 func _on_animation_finished():
 	if animated_sprite.animation == "attack":
-		# 攻击动画结束，关闭 Hitbox
+		# 普通攻击动画结束，关闭普通攻击 Hitbox
 		if weapon_handler:
 			weapon_handler.set_hitbox_monitoring(false)
+		# 强制切换回 idle，防止卡在攻击状态
+		animated_sprite.play("idle")
+	
+	elif animated_sprite.animation == "attack2":
+		# 斩击动画结束，关闭斩击 Hitbox
+		if weapon_handler:
+			weapon_handler.set_slash_hitbox_monitoring(false)
 		# 强制切换回 idle，防止卡在攻击状态
 		animated_sprite.play("idle")
 	
@@ -153,7 +160,7 @@ func _physics_process(delta: float) -> void:
 	var direction := Input.get_axis("move_left", "move_right")
 	
 	# [新增] 检查攻击状态
-	var is_attacking = animated_sprite and animated_sprite.animation == "attack" and animated_sprite.is_playing()
+	var is_attacking = animated_sprite and (animated_sprite.animation == "attack" or animated_sprite.animation == "attack2") and animated_sprite.is_playing()
 	
 	if is_attacking:
 		# 攻击时定身：不响应移动输入，应用摩擦力
@@ -190,14 +197,13 @@ func _physics_process(delta: float) -> void:
 	else:
 		velocity.x = move_toward(velocity.x, 0, FRICTION * delta)
 
-	# --- 状态优先级逻辑 ---
-	# 如果正在播放攻击或转身动画，且动画还没播完，就不要播放跑步或待机动画
-	if (animated_sprite.animation == "attack" or animated_sprite.animation == "turn") and animated_sprite.is_playing():
-		# 可以在这里选择是否允许移动，如果想攻击时定身：
-		# velocity.x = 0
-		pass 
+	# --- 状态优先级逻辑 (修改后) ---
+	# 如果正在播放 [攻击] 或 [转身] 或 [斩击] 动画，且动画还没播完...
+	# 务必把 "slash" (或者你用的 "attack2") 加到这个判断里！
+	if (animated_sprite.animation == "attack" or animated_sprite.animation == "turn" or animated_sprite.animation == "attack2") and animated_sprite.is_playing():
+		pass # 正在做重要动作，什么都别做，保持当前动画
 	else:
-		# 处理移动动画
+		# 只有没在攻击时，才允许切换跑步/待机
 		if velocity.y == 0:
 			if direction != 0:
 				animated_sprite.play("run")
@@ -212,21 +218,36 @@ func _physics_process(delta: float) -> void:
 	# --- 执行移动 ---
 	move_and_slide()
 
-	# --- 攻击输入 ---
+	# --- 远程攻击输入 ---
 	if Input.is_action_just_pressed("attack"):
 		# 远程攻击逻辑保持不变
 		weapon_handler.attack()
 		update_combat_state() # 记录攻击时间
 
-	if Input.is_action_just_pressed("melee_attack"):
-		# 1. 播放动画
-		animated_sprite.play("attack")
-		# 手动开启 Hitbox (因为 AnimatedSprite2D 无法像 AnimationPlayer 那样在轨道中开启)
-		weapon_handler.set_hitbox_monitoring(true)
+	# --- 左键逻辑 ---
+	if Input.is_action_pressed("melee_attack"):
+		# 尝试执行斩击
+		var slash_success = try_execute_slash_attack()
 		
-		# 2. 通知 WeaponHandler (计算伤害数值等)
-		weapon_handler.melee_attack()
-		update_combat_state() # 记录攻击时间
+		# [关键]：只有当 slash_success 为 false (没蓝或CD中) 时，
+		# 并且是“刚刚按下”(点击) 时，才转为普攻。
+		if not slash_success and Input.is_action_just_pressed("melee_attack"):
+			print("蓝量不足或冷却中，转为普通攻击")
+			# 执行普攻逻辑
+			if animated_sprite:
+				animated_sprite.play("attack")
+			weapon_handler.set_hitbox_monitoring(true)
+			weapon_handler.melee_attack()
+			update_combat_state()
+
+	# --- V键逻辑：强制斩击 ---
+	if Input.is_action_pressed("slash_attack"):
+		# 直接尝试执行，不需要额外逻辑，因为 try_execute_slash_attack 内部已经处理了蓝量和CD
+		if try_execute_slash_attack():
+			pass # 成功斩击
+		else:
+			# 可选：如果按V但没蓝或CD中，这里可以加提示
+			pass
 
 	# --- Debug: 受伤测试 (保留) ---
 	if Input.is_action_just_pressed("debug_hurt"):
@@ -235,6 +256,45 @@ func _physics_process(delta: float) -> void:
 # 更新战斗状态辅助函数
 func update_combat_state():
 	last_combat_time = Time.get_ticks_msec() / 1000.0
+
+# --- 辅助函数：手动控制判定时机 ---
+func perform_slash_logic():
+	# 立即开启判定框
+	weapon_handler.set_slash_hitbox_monitoring(true)
+	
+	# 等待一小段时间 (例如 0.1秒) 后关闭
+	# 这能保证判定框存在足够的时间来检测碰撞，但又不会一直开着
+	await get_tree().create_timer(0.1).timeout
+	
+	# 关闭判定框
+	weapon_handler.set_slash_hitbox_monitoring(false)
+
+# --- 辅助函数：执行斩击攻击 (返回是否成功) ---
+# --- 修复后的通用斩击逻辑 ---
+func try_execute_slash_attack() -> bool:
+	# 1. 第一关：问武器"冷却好了吗？"
+	if not weapon_handler.can_slash():
+		return false # 冷却没好，直接视为失败，不扣蓝
+	
+	# 2. 第二关：尝试扣费
+	# try_consume_mana 内部会自动判断够不够、够了就扣、不够回false
+	if not try_consume_mana(5, "melee"):
+		return false # 没钱（蓝不够），直接视为失败
+		
+	# --- 3. 只有前两关都过了，才真正动手 ---
+	
+	# A. 通知武器"即使生效" (重置冷却)
+	weapon_handler.execute_slash()
+	
+	# B. 播放动画 (既然你已经修好了抽搐问题，就用你现在的播放方式)
+	if animated_sprite:
+		
+		animated_sprite.play("attack2")
+		
+	# C. 开启判定框
+	perform_slash_logic()
+	
+	return true # 告诉调用者：斩击成功执行了！
 
 # --- 6. 生命值函数 ---
 			
