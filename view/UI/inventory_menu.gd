@@ -16,7 +16,7 @@ func _ready():
 	# 加载几个法术资源放入背包
 	visible = false 
 	available_spells.append(load("res://viewmodel/spells/fireball.tres"))
-	available_spells.append(load("res://viewmodel/spells/fireball.tres"))
+	available_spells.append(load("res://viewmodel/spells/ice_shard.tres"))
 	
 	# 初始化背包显示
 	_init_inventory_grid()

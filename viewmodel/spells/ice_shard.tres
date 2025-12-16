@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="Spell" load_steps=3 format=3 uid="uid://c31ipisvva40f"]
+
+[ext_resource type="Texture2D" uid="uid://djtu1de4h627i" path="res://assets/icons/冰锥.png" id="1_bk8m7"]
+[ext_resource type="Script" uid="uid://bljpn23n2gjb3" path="res://viewmodel/spells/spell.gd" id="1_tfod4"]
+
+[resource]
+script = ExtResource("1_tfod4")
+spell_name = "Ice Shard"
+spell_description = "快速飞行并减速敌人"
+icon = ExtResource("1_bk8m7")
+damage = 15
+cooldown_reduction = 0.2
+effect_id = "ice_shard"
+metadata/_custom_type_script = "uid://bljpn23n2gjb3"

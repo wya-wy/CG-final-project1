@@ -2,6 +2,7 @@ extends Node2D
 
 # 预加载投射物资源
 const FIREBALL_PROJECTILE = preload("res://viewmodel/spells/fireball_projectile.tscn")
+const ICE_SHARD_PROJECTILE = preload("res://viewmodel/spells/ice_shard_projectile.tscn")
 
 # --- 资源变量 ---
 # [重要] 这是一个模版资源！不要直接修改它。
@@ -168,6 +169,29 @@ func spawn_projectile(spell_data: Spell, offset: Vector2 = Vector2.ZERO, modifie
 		"flame_buff":
 			print("WeaponHandler: Cast Buff!")
 			# 这里写 Buff 逻辑
+
+		"ice_shard":
+			var projectile = ICE_SHARD_PROJECTILE.instantiate()
+
+			# 1. 计算方向
+			var mouse_pos = get_global_mouse_position()
+			var direction = (mouse_pos - global_position).normalized()
+
+			# 2. 设置位置和旋转
+			projectile.global_position = global_position + offset
+			projectile.rotation = direction.angle()
+
+			# 3. 设置属性
+			# 冰锥速度快 (例如 1500)
+			projectile.velocity = direction * 1500 
+			if "damage" in projectile:
+				projectile.damage = spell_data.damage
+
+			# 4. 应用修改器 (如果有)
+			if modifiers.has("damage_multiplier"):
+				projectile.damage = int(projectile.damage * modifiers["damage_multiplier"])
+
+			get_tree().current_scene.add_child(projectile)
 
 		_:
 			print("WeaponHandler: Unknown spell effect_id: ", spell_data.effect_id)

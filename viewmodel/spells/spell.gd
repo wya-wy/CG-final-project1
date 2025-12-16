@@ -8,4 +8,7 @@ class_name Spell
 @export var icon: Texture2D
 @export var mana_cost: int = 10
 
+@export var damage: int = 10
+@export var cooldown_reduction: float = 0.0
+
 @export var effect_id: String = "fireball"
