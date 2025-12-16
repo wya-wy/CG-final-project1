@@ -1,335 +1,289 @@
-extends CharacterBody2D
+extends Node2D
 
-# --- 1. 节点引用 ---
-# @onready 确保在 _ready() 之前获取到 WeaponHandler 节点
-# ($WeaponHandler 是 Player 场景中子节点的名称)
-@onready var weapon_handler = $WeaponHandler
+# 预加载投射物资源
+const FIREBALL_PROJECTILE = preload("res://viewmodel/spells/fireball_projectile.tscn")
 
-# 新增：获取 AnimatedSprite2D
-@onready var animated_sprite = $AnimatedSprite2D
+# --- 资源变量 ---
+# [重要] 这是一个模版资源！不要直接修改它。
+# 在编辑器里把你的 test_sword.tres 拖进去。
+@export var weapon_template: Weapon 
 
-# --- 2. 移动常量 ---
-const SPEED = 300.0
-const ACCELERATION = 1500.0
-const FRICTION = 1200.0
-const JUMP_VELOCITY = -800.0
-# 土狼时间
-const COYOTE_TIME_DURATION: float = 0.1
-var coyote_timer: float = 0.0
+# [重要] 这是游戏运行时实际使用的独立副本。
+# 所有的动态装填、修改法术都只针对这个变量，不会影响原始文件。
+var runtime_weapon: Weapon
 
-# --- 3. 生命值属性 ---
-@export var max_health: int = 100
-var current_health: int
-var is_dead: bool = false
+# --- 内部变量 ---
+# 记录当前轮到第几个槽位发射了
+var current_slot_index: int = 0
+# 攻击间隔控制
+var last_slash_time: float = 0.0
+var slash_cooldown: float = 0.15 # 0.15秒攻击间隔
 
-# --- 4. 魔法值属性 ---
-# 普通蓝量上限为 100
-@export var max_normal_mana: int = 100
-# 浓缩蓝量上限为 50
-@export var max_condensed_mana: int = 50
-@export var normal_mana_regen_rate: float = 10.0  # 回普通蓝速度
-@export var condensed_mana_regen_rate: float = 6.0  # 回浓缩蓝速度
-var normal_mana: float = 100.0
-var condensed_mana: float = 50.0
+# 获取 Hitbox 节点引用
+@onready var melee_hitbox: Area2D = get_node_or_null("MeleeHitbox")
+@onready var slash_hitbox: Area2D = get_node_or_null("SlashHitbox")
 
-# 战斗状态记录
-var last_combat_time: float = -10.0
-const COMBAT_COOLDOWN: float = 2.0  # 停止攻击2秒后开始回浓缩蓝
-
-@export_category("Debug")
-@export var debug_infinite_air_jump: bool = false
-
-# 获取总蓝量
-func get_total_mana() -> int:
-	return int(normal_mana + condensed_mana)
-
-# 发信号
-func emit_mana_signal():
-	EventBus.emit_signal("player_mana_changed", normal_mana, condensed_mana, max_normal_mana, max_condensed_mana)
-
-# --- 5. 初始化 ---
 func _ready():
-	# 游戏开始时，满血满蓝
-	current_health = max_health
-	normal_mana = float(max_normal_mana)
-	condensed_mana = float(max_condensed_mana)
-	is_dead = false
-	
-	# 连接动画结束信号
-	if animated_sprite:
-		animated_sprite.animation_finished.connect(_on_animation_finished)
-	
-	# 初始化UI
-	EventBus.emit_signal("player_health_changed", current_health, max_health)
-	emit_mana_signal()
-
-func _on_animation_finished():
-	if animated_sprite.animation == "attack":
-		# 攻击动画结束，关闭 Hitbox
-		if weapon_handler:
-			weapon_handler.set_hitbox_monitoring(false)
-		# 强制切换回 idle，防止卡在攻击状态
-		animated_sprite.play("idle")
-	
-	elif animated_sprite.animation == "turn":
-		# [关键修复] 转身动画播放完毕后，手动更新翻转状态
-		animated_sprite.flip_h = not animated_sprite.flip_h
-		
-		# 转身结束后，根据当前状态切换动画
-		if velocity.x != 0:
-			animated_sprite.play("run")
-		else:
-			animated_sprite.play("idle")
-			
-	elif animated_sprite.animation == "hit":
-		# 受伤动画结束，恢复待机
-		animated_sprite.play("idle")
-		
-	elif animated_sprite.animation == "death":
-		# 死亡动画播放完毕，彻底停止物理处理
-		set_physics_process(false)
-		# 可以在这里暂停动画，防止循环
-		animated_sprite.pause()
-
-# --- 6. 物理 & 输入循环 ---
-func _physics_process(delta: float) -> void:
-	
-	# --- 自动回蓝 ---
-	if not is_dead:
-		var changed = false
-		
-		# 1. 普通蓝：一直回复，直到 max_normal_mana
-		if normal_mana < max_normal_mana:
-			normal_mana = move_toward(normal_mana, float(max_normal_mana), normal_mana_regen_rate * delta)
-			changed = true
-			
-		# 2. 浓缩蓝：脱战后回复，直到 max_condensed_mana
-		var time_since_combat = Time.get_ticks_msec() / 1000.0 - last_combat_time
-		if time_since_combat > COMBAT_COOLDOWN:
-			if condensed_mana < max_condensed_mana:
-				condensed_mana = move_toward(condensed_mana, float(max_condensed_mana), condensed_mana_regen_rate * delta)
-				changed = true
-		
-		if changed:
-			emit_mana_signal()
-
-	# --- 土狼时间 ---
-	if is_on_floor():
-		coyote_timer = COYOTE_TIME_DURATION
+	# 1. 初始化武器实例
+	if weapon_template:
+		initialize_weapon(weapon_template)
 	else:
-		coyote_timer -= delta
+		print("WeaponHandler: Warning - No weapon template assigned!")
 
-	# --- 重力 ---
-	if not is_on_floor():
-		velocity += get_gravity() * delta
+	# 2. 初始化近战 Hitbox
+	if melee_hitbox:
+		melee_hitbox.monitoring = false
+		melee_hitbox.body_entered.connect(_on_melee_hitbox_body_entered)
+	else:
+		print("WeaponHandler: Warning - 'MeleeHitbox' node not found.")
+		
+	# 3. 初始化 SlashHitbox
+	if slash_hitbox:
+		# 确保开始是关闭的
+		slash_hitbox.monitoring = false
+		
+		# 连接碰撞信号 (确保只连一次)
+		if not slash_hitbox.body_entered.is_connected(_on_slash_hitbox_body_entered):
+			slash_hitbox.body_entered.connect(_on_slash_hitbox_body_entered)
+	else:
+		print("Error: 未找到 SlashHitbox! 请在编辑器中创建。")
 
-	# [新增] 死亡状态检查
-	if is_dead:
-		velocity.x = move_toward(velocity.x, 0, FRICTION * delta)
-		move_and_slide()
+# --- 物理帧更新：添加强力调试 --- 
+func _physics_process(delta): 
+	# 仅在判定框开启时检测 
+	if slash_hitbox and slash_hitbox.monitoring: 
+		# 这是一个强力函数，直接获取当前重叠的所有物体 
+		var bodies = slash_hitbox.get_overlapping_bodies() 
+		
+		if bodies.size() > 0: 
+			print("DEBUG: 物理引擎检测到了重叠物体! 数量: ", bodies.size()) 
+			for b in bodies: 
+				print(" - 重叠物体: ", b.name, " | 层级: ", b.collision_layer) 
+		else: 
+			# 如果这一行疯狂打印，说明红框虽然看见了，但物理上它是空的 
+			# print("DEBUG: 判定框开启中，但没有检测到任何物体...") 
+			pass
+
+# --- 核心功能：初始化武器 ---
+# 当你需要换武器时，也可以调用这个函数传入新的武器资源
+func initialize_weapon(new_weapon_data: Weapon):
+	# duplicate(true) 会深度复制资源，包括里面的数组。
+	# 这样我们就有了一把属于这个玩家的、独一无二的剑。
+	runtime_weapon = new_weapon_data.duplicate(true)
+	current_slot_index = 0
+	print("WeaponHandler: Weapon initialized -> ", runtime_weapon.weapon_name)
+
+# --- 核心功能：动态装填法术 ---
+# 供 UI、背包系统或剧情脚本调用
+# slot_idx: 槽位编号 (0, 1, 2...)
+# spell_data: 要放入的法术资源
+func install_spell(slot_idx: int, spell_data: Spell):
+	if not runtime_weapon:
+		print("WeaponHandler: No runtime weapon!")
+		return
+	
+	if slot_idx < 0 or slot_idx >= runtime_weapon.slots.size():
+		print("WeaponHandler: Invalid slot index %d" % slot_idx)
+		return
+	
+	# 获取目标槽位 (SpellSlot 实例)
+	var target_slot = runtime_weapon.slots[slot_idx]
+	
+	# 调用槽位自己的装填逻辑
+	if target_slot.has_method("equip_spell"):
+		if target_slot.equip_spell(spell_data):
+			print("WeaponHandler: Equipped %s into slot %d" % [spell_data.spell_name, slot_idx])
+		else:
+			print("WeaponHandler: Failed to equip spell (Slot full?)")
+	else:
+		print("WeaponHandler: Error - Slot resource does not have 'equip_spell' method.")
+
+# --- 核心功能：攻击逻辑 ---
+# 对应鼠标左键或攻击键
+func attack():
+	if not runtime_weapon:
 		return
 
-	# [新增] 检查受伤僵直状态
-	# 如果正在播放 hit 动画，则处于僵直状态
-	var is_hurt = animated_sprite and animated_sprite.animation == "hit" and animated_sprite.is_playing()
-	
-	if is_hurt:
-		# 僵直时：无法移动、无法跳跃、无法攻击
-		# 仅保留重力和摩擦力
-		velocity.x = move_toward(velocity.x, 0, FRICTION * delta)
-		move_and_slide()
-		return # 直接返回，跳过后续所有输入处理
+	if runtime_weapon.slots.is_empty():
+		print("WeaponHandler: Weapon has no slots!")
+		return
 
-	# --- 跳跃 ---
-	if Input.is_action_just_pressed("jump"):
-		var can_jump := coyote_timer > 0
-		if debug_infinite_air_jump and OS.is_debug_build():
-			can_jump = true
-		if can_jump:
-			velocity.y = JUMP_VELOCITY
-			coyote_timer = 0.0
-
-	# --- 左右移动 ---
-	var direction := Input.get_axis("move_left", "move_right")
+	# --- 新增逻辑：寻找下一个有法术的槽位 ---
+	# 目的：跳过空的槽位，实现 1-1-1 的连发效果
+	var found_valid_slot = false
+	var checked_count = 0
 	
-	# [新增] 检查攻击状态
-	var is_attacking = animated_sprite and animated_sprite.animation == "attack" and animated_sprite.is_playing()
-	
-	if is_attacking:
-		# 攻击时定身：不响应移动输入，应用摩擦力
-		velocity.x = move_toward(velocity.x, 0, FRICTION * delta)
+	# 最多循环检查一圈（防止所有槽都空导致死循环）
+	while checked_count < runtime_weapon.slots.size():
+		var slot = runtime_weapon.slots[current_slot_index]
 		
-	elif direction:
-		velocity.x = move_toward(velocity.x, direction * SPEED, ACCELERATION * delta)
+		# 检查：这个槽位里装了东西吗？
+		# 注意：需要确保你的 SpellSlot 脚本里已经加了 get_equipped_spells() 函数
+		if slot.has_method("get_equipped_spells") and not slot.get_equipped_spells().is_empty():
+			found_valid_slot = true
+			break # 找到了！这就用它，跳出循环
 		
-		# --- 视觉朝向翻转 ---
-		# 1. 翻转玩家精灵
-		if animated_sprite:
-			# 检测转身：如果在地面上，且输入方向与当前速度方向相反 (急停转身)
-			if is_on_floor() and direction != 0:
-				# 判断当前速度方向是否与输入相反
-				# 注意：velocity.x 刚刚被 move_toward 更新过
-				var is_moving_oppositely = (velocity.x > 0 and direction < 0) or (velocity.x < 0 and direction > 0)
-				
-				# 只有当确实在移动（速度足够大）且方向相反时才播放转身动画
-				# 如果速度为0或很小，视为原地转身，直接翻转不播放动画
-				if is_moving_oppositely and abs(velocity.x) > 20:
-					if animated_sprite.animation != "turn":
-						animated_sprite.play("turn")
-			
-			# [修改] 只有在不播放转身动画时才更新翻转状态
-			# 防止转身动画被镜像，导致看起来方向反了
-			if animated_sprite.animation != "turn":
-				animated_sprite.flip_h = (direction < 0)
-			
-		# 2. 翻转武器处理器 (用于调整近战 Hitbox 位置)
-		# 如果向左移动，将 WeaponHandler 的 X 轴缩放设为 -1
-		if weapon_handler:
-			weapon_handler.scale.x = -1 if direction < 0 else 1
-			
-	else:
-		velocity.x = move_toward(velocity.x, 0, FRICTION * delta)
-
-	# --- 状态优先级逻辑 ---
-	# 如果正在播放攻击或转身动画，且动画还没播完，就不要播放跑步或待机动画
-	if (animated_sprite.animation == "attack" or animated_sprite.animation == "turn") and animated_sprite.is_playing():
-		# 可以在这里选择是否允许移动，如果想攻击时定身：
-		# velocity.x = 0
-		pass 
-	else:
-		# 处理移动动画
-		if velocity.y == 0:
-			if direction != 0:
-				animated_sprite.play("run")
-			else:
-				animated_sprite.play("idle")
-		else:
-			if velocity.y > 0:
-				animated_sprite.play("fall")
-			else:
-				animated_sprite.play("jump")
-
-	# --- 执行移动 ---
-	move_and_slide()
-
-	# --- 攻击输入 ---
+		# 没装东西 -> 索引+1，继续找下一个
+		current_slot_index = (current_slot_index + 1) % runtime_weapon.slots.size()
+		checked_count += 1
 	
-	# 鼠标左键 (melee_attack)：近战攻击和斩击
-	if Input.is_action_just_pressed("melee_attack"):
-		# 1. 优先检查是否满足斩击条件 (蓝量 >= 5)
-		if get_total_mana() >= 5:
-			animation_player.play("slash", -1, 1.0) # 暂时把速度改慢
-			weapon_handler.slash_attack()
-		else:
-			# 2. 蓝量不足，执行普通近战攻击
-			animation_player.play("attack")
-			weapon_handler.melee_attack()
+	# 如果转了一圈发现全是空的，那就直接返回，不执行攻击
+	if not found_valid_slot:
+		return
+	# ----------------------------------------
+
+	# 1. 获取当前找到的有效槽位
+	# 注意：这里的 slots 数组里装的是 SpellSlot 资源 (如 SpellSlot 或 DoubleSlot)
+	var current_slot = runtime_weapon.slots[current_slot_index]
+	
+	# 2. 计算蓝耗 (让槽位自己算，因为双发槽可能耗蓝更多)
+	var mana_cost = 0
+	if current_slot.has_method("get_total_mana_cost"):
+		mana_cost = current_slot.get_total_mana_cost()
+	
+	# 3. 检查并消耗蓝量
+	var player = get_parent() # 假设父节点是 Player
+	if player.has_method("try_consume_mana"):
+		# 如果蓝不够，直接返回，不执行攻击
+		if not player.try_consume_mana(mana_cost, "spell"):
+			# 可以加一个 "No Mana" 的 UI 提示或者音效
+			return 
+
+	# 4. 激活槽位！
+	# 我们把 self (WeaponHandler) 传给槽位，这样槽位才能回调 spawn_projectile
+	if current_slot.has_method("activate"):
+		current_slot.activate(self, player)
+	
+	# 5. 只有在成功发射后，才把索引移到下一位，为下一次点击做准备
+	current_slot_index = (current_slot_index + 1) % runtime_weapon.slots.size()
+
+
+# --- 公共 API：生成投射物 ---
+# 这个函数由 SpellSlot 资源调用，它不关心是单发还是双发，只负责造子弹
+# modifiers: 一个字典，用于传递特殊效果（如穿透、伤害倍率等）
+func spawn_projectile(spell_data: Spell, offset: Vector2 = Vector2.ZERO, modifiers: Dictionary = {}):
+	if not spell_data:
+		return
+
+	match spell_data.effect_id:
+		"fireball":
+			var projectile = FIREBALL_PROJECTILE.instantiate()
 			
-		update_combat_state()
-
-	# 鼠标右键 (attack)：法术释放
-	if Input.is_action_just_pressed("attack"):
-		# 执行原有的远程攻击逻辑
-		weapon_handler.attack()
-		update_combat_state()
-
-	# V键触发斩击 (保持不变，用于强制触发)
-	if Input.is_action_just_pressed("slash_attack"):
-		animation_player.play("slash", -1, 1.0) # 暂时把速度改慢
-		weapon_handler.slash_attack()
-		update_combat_state()
-
-	# --- Debug: 受伤测试 (保留) ---
-	if Input.is_action_just_pressed("debug_hurt"):
-		take_damage(40)
-
-# 更新战斗状态辅助函数
-func update_combat_state():
-	last_combat_time = Time.get_ticks_msec() / 1000.0
-# --- 6. 生命值函数 ---
+			# 计算发射方向（鼠标方向）
+			var mouse_pos = get_global_mouse_position()
+			var direction = (mouse_pos - global_position).normalized()
 			
-func take_damage(amount: int):
-	if is_dead:
-		return # 已经死了，不再受伤
-
-	current_health -= amount
-	print("Player 受到 ", amount, " 点伤害，剩余生命: ", current_health)
-
-	# 1. 播放受伤动画 & 进入僵直
-	if animated_sprite:
-		animated_sprite.play("hit")
-		# 如果正在攻击，强制打断
-		if weapon_handler:
-			weapon_handler.set_hitbox_monitoring(false)
+			# 设置位置（加上偏移量，用于双发槽位避免重叠）
+			projectile.global_position = global_position + offset
+			projectile.rotation = direction.angle()
 			
-		# 2. 闪白/变色反馈 (使用 Tween)
-		# 瞬间变红，然后0.2秒内变回原色
-		var tween = create_tween()
-		animated_sprite.modulate = Color(10, 10, 10, 1) # 尝试用 HDR 值模拟高亮闪白，如果不支持 HDR 会显示为白色/原色
-		# 如果觉得太亮或没效果，可以改成 Color.RED
-		tween.tween_property(animated_sprite, "modulate", Color.WHITE, 0.2)
+			# 设置速度
+			# 这里最好将来把速度也放在 Spell 资源里配置
+			projectile.velocity = direction * 1000 
+			
+			# --- 处理修改器 (Modifiers) ---
+			# 如果是强化槽位传来的参数，在这里应用
+			if modifiers.has("damage_multiplier"):
+				projectile.damage = int(projectile.damage * modifiers["damage_multiplier"])
+			
+			if modifiers.has("penetration") and modifiers["penetration"] == true:
+				# 假设你的子弹脚本支持穿透属性
+				if "penetration_count" in projectile:
+					projectile.penetration_count = 999 
+				else:
+					print("WeaponHandler: Projectile does not support penetration.")
 
-	# 广播生命值变化 (用于 HUD 更新)
-	EventBus.emit_signal("player_health_changed", current_health, max_health)
+			# 添加到场景
+			get_tree().current_scene.add_child(projectile)
 
-	# 检查死亡
-	if current_health <= 0:
-		player_died()
+		"flame_buff":
+			print("WeaponHandler: Cast Buff!")
+			# 这里写 Buff 逻辑
+
+		_:
+			print("WeaponHandler: Unknown spell effect_id: ", spell_data.effect_id)
+
+	# 发送信号（用于播放音效或UI）
+	EventBus.emit_signal("player_attacked", spell_data)
 
 
-func player_died():
-	# 防止重复调用
-	if is_dead:
+# --- 辅助功能：连续发射 ---
+# 供 Sequential 模式的槽位使用（如果有的话）
+func cast_sequential(spells: Array[Spell], delay: float):
+	for spell in spells:
+		if spell:
+			spawn_projectile(spell)
+			# 等待
+			await get_tree().create_timer(delay).timeout
+
+
+# --- 近战逻辑 (保持原有逻辑) ---
+func melee_attack():
+	if not runtime_weapon:
 		return
 		
-	is_dead = true
-	print("Player 死亡。")
-	
-	# 确保关闭攻击判定
-	if weapon_handler:
-		weapon_handler.set_hitbox_monitoring(false)
-	
-	# 播放死亡动画
-	if animated_sprite:
-		animated_sprite.play("death")
-	
-	# 广播死亡事件 (用于 GameManager 切换状态)
-	EventBus.emit_signal("player_died")
-	
-	# 注意：我们不再立即调用 set_physics_process(false)
-	# 而是让 _physics_process 继续运行以处理重力和死亡动画期间的状态
-	# 直到动画播放完毕在 _on_animation_finished 中停止
+	print("WeaponHandler: Melee attack with ", runtime_weapon.weapon_name, " (Damage: ", runtime_weapon.melee_damage, ")")
+	EventBus.emit_signal("player_melee_attacked")
 
-# --- 7. 魔法值函数 ---
-# type: "spell" (法术) 或 "melee" (近战/强化)
-func try_consume_mana(amount: int, type: String) -> bool:
-	if type == "spell":
-		# 法术只扣浓缩蓝
-		if condensed_mana >= amount:
-			condensed_mana -= amount
-			normal_mana -= amount
-			emit_mana_signal()
-			return true
-		return false
+# --- 斩击逻辑 ---
+func slash_attack():
+	if not runtime_weapon:
+		return
 		
-	elif type == "melee":
-		# 近战优先扣普通，不够扣浓缩
-		if normal_mana >= amount:
-			normal_mana -= amount
-			emit_mana_signal()
-			return true
-		elif normal_mana + condensed_mana >= amount:
-			condensed_mana -= amount - normal_mana
-			normal_mana = 0
-			emit_mana_signal()
-			return true
-		return false
-	return false
+	# 1. 检查攻击间隔
+	var current_time = Time.get_ticks_msec() / 1000.0
+	if current_time - last_slash_time < slash_cooldown:
+		return
+	last_slash_time = current_time
+		
+	# 2. 检查并消耗蓝量（耗蓝5）
+	# 注意：蓝量检查已经在player.gd中完成，这里只负责消耗
+	var player = get_parent()
+	if player and player.has_method("try_consume_mana"):
+		# 直接消耗蓝量，因为已经在player.gd中检查过
+		player.try_consume_mana(5, "melee")
+		
+	# 3. 动画已经在player.gd中播放，这里不再重复播放
+	# 碰撞体控制由动画中的方法调用处理
+	print("WeaponHandler: Slash attack executed")
+	
+	# 5. 事件信号
+	EventBus.emit_signal("player_slash_attacked")
 
-# 兼容旧接口
-func has_enough_mana(amount: int) -> bool:
-	return get_total_mana() >= amount
+func set_hitbox_monitoring(enabled: bool):
+	if melee_hitbox:
+		melee_hitbox.monitoring = enabled
+	
+# 3. 动画调用的控制函数 (桥梁)
+# 动画播放到特定帧时会调用此函数开启/关闭判定
+func set_slash_hitbox_monitoring(enabled: bool):
+	if slash_hitbox:
+		slash_hitbox.monitoring = enabled
+		# 可选：Debug 输出
+		if enabled:
+			print("Slash Hitbox 开启!")
 
-func consume_mana(amount: int):
-	# 默认当作近战类型消耗
-	try_consume_mana(amount, "melee")
+func _on_melee_hitbox_body_entered(body: Node2D):
+	if not runtime_weapon: return
+	
+	if body.has_method("take_damage"):
+		print("WeaponHandler: Hit enemy ", body.name)
+		body.take_damage(runtime_weapon.melee_damage)
+
+# 4. 碰撞回调 (执行伤害)
+func _on_slash_hitbox_body_entered(body: Node2D):
+	# 【重要】防止误伤自己
+	if body == get_parent() or body.is_in_group("player"):
+		return
+
+	print("砍到了: ", body.name)
+	
+	# 扣血逻辑
+	if body.has_method("take_damage"):
+		var damage = 15
+		# 暴击逻辑 (30% 几率双倍)
+		if randf() < 0.3:
+			damage *= 2
+			print("暴击!")
+			
+		body.take_damage(damage)
