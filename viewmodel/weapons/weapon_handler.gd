@@ -17,7 +17,11 @@ var runtime_weapon: Weapon
 var current_slot_index: int = 0
 # 攻击间隔控制
 var last_slash_time: float = 0.0
-var slash_cooldown: float = 0.15 # 0.15秒攻击间隔
+# 1. 定义斩击数值
+var slash_cooldown: float = 0.15   # 需求：0.15秒极速间隔
+var slash_crit_rate: float = 0.3   # 需求：+0.3 暴击率 (30%)
+var slash_mana_cost: int = 5       # 需求：耗蓝 5
+var slash_damage: int = 20         # 设定一个基础伤害值
 
 # 获取 Hitbox 节点引用
 @onready var melee_hitbox: Area2D = get_node_or_null("MeleeHitbox")
@@ -225,43 +229,37 @@ func melee_attack():
 	print("WeaponHandler: Melee attack with ", runtime_weapon.weapon_name, " (Damage: ", runtime_weapon.melee_damage, ")")
 	EventBus.emit_signal("player_melee_attacked")
 
-# --- 斩击逻辑 ---
-func slash_attack():
+# --- 修改：拆分斩击逻辑 ---
+
+# 1. [查询] 只检查冷却，绝不碰蓝量，也不修改数据
+func can_slash() -> bool:
 	if not runtime_weapon:
-		return
-		
-	# 1. 检查攻击间隔
+		return false
 	var current_time = Time.get_ticks_msec() / 1000.0
-	if current_time - last_slash_time < slash_cooldown:
-		return
-	last_slash_time = current_time
-		
-	# 2. 检查并消耗蓝量（耗蓝5）
-	# 注意：蓝量检查已经在player.gd中完成，这里只负责消耗
-	var player = get_parent()
-	if player and player.has_method("try_consume_mana"):
-		# 直接消耗蓝量，因为已经在player.gd中检查过
-		player.try_consume_mana(5, "melee")
-		
-	# 3. 动画已经在player.gd中播放，这里不再重复播放
-	# 碰撞体控制由动画中的方法调用处理
-	print("WeaponHandler: Slash attack executed")
-	
-	# 5. 事件信号
+	return current_time - last_slash_time >= slash_cooldown
+
+# 2. [执行] 真的砍出去了：只负责重置冷却、发信号
+# 注意：调用这个之前，Player 必须保证已经扣完蓝了
+func execute_slash():
+	last_slash_time = Time.get_ticks_msec() / 1000.0
+	print("WeaponHandler: Slash executed! (CD reset)")
 	EventBus.emit_signal("player_slash_attacked")
+
+# --- 兼容旧接口 (可选，保持向后兼容) ---
+func slash_attack() -> bool:
+	if can_slash():
+		execute_slash()
+		return true
+	return false
 
 func set_hitbox_monitoring(enabled: bool):
 	if melee_hitbox:
 		melee_hitbox.monitoring = enabled
 	
-# 3. 动画调用的控制函数 (桥梁)
-# 动画播放到特定帧时会调用此函数开启/关闭判定
+# --- 4. 判定框控制 (保持不变) ---
 func set_slash_hitbox_monitoring(enabled: bool):
 	if slash_hitbox:
 		slash_hitbox.monitoring = enabled
-		# 可选：Debug 输出
-		if enabled:
-			print("Slash Hitbox 开启!")
 
 func _on_melee_hitbox_body_entered(body: Node2D):
 	if not runtime_weapon: return
@@ -270,20 +268,20 @@ func _on_melee_hitbox_body_entered(body: Node2D):
 		print("WeaponHandler: Hit enemy ", body.name)
 		body.take_damage(runtime_weapon.melee_damage)
 
-# 4. 碰撞回调 (执行伤害)
+# --- 3. 碰撞回调 (处理伤害与暴击) ---
 func _on_slash_hitbox_body_entered(body: Node2D):
-	# 【重要】防止误伤自己
+	# 防止误伤自己
 	if body == get_parent() or body.is_in_group("player"):
 		return
 
-	print("砍到了: ", body.name)
-	
-	# 扣血逻辑
 	if body.has_method("take_damage"):
-		var damage = 15
-		# 暴击逻辑 (30% 几率双倍)
-		if randf() < 0.3:
-			damage *= 2
-			print("暴击!")
+		var final_damage = slash_damage
+		
+		# C. 暴击逻辑 (需求：+0.3 暴击)
+		if randf() < slash_crit_rate:
+			final_damage *= 2  # 暴击翻倍
+			print(">>> 暴击! (Critical Hit) 伤害:", final_damage)
+		else:
+			print("斩击命中: ", body.name, " 伤害:", final_damage)
 			
-		body.take_damage(damage)
+		body.take_damage(final_damage)
