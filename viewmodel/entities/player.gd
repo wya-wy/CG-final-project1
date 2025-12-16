@@ -213,20 +213,31 @@ func _physics_process(delta: float) -> void:
 	move_and_slide()
 
 	# --- 攻击输入 ---
-	if Input.is_action_just_pressed("attack"):
-		# 远程攻击逻辑保持不变
-		weapon_handler.attack()
-		update_combat_state() # 记录攻击时间
-
+	
+	# 鼠标左键 (melee_attack)：近战攻击和斩击
 	if Input.is_action_just_pressed("melee_attack"):
-		# 1. 播放动画
-		animated_sprite.play("attack")
-		# 手动开启 Hitbox (因为 AnimatedSprite2D 无法像 AnimationPlayer 那样在轨道中开启)
-		weapon_handler.set_hitbox_monitoring(true)
-		
-		# 2. 通知 WeaponHandler (计算伤害数值等)
-		weapon_handler.melee_attack()
-		update_combat_state() # 记录攻击时间
+		# 1. 优先检查是否满足斩击条件 (蓝量 >= 5)
+		if get_total_mana() >= 5:
+			animation_player.play("slash", -1, 1.0) # 暂时把速度改慢
+			weapon_handler.slash_attack()
+		else:
+			# 2. 蓝量不足，执行普通近战攻击
+			animation_player.play("attack")
+			weapon_handler.melee_attack()
+			
+		update_combat_state()
+
+	# 鼠标右键 (attack)：法术释放
+	if Input.is_action_just_pressed("attack"):
+		# 执行原有的远程攻击逻辑
+		weapon_handler.attack()
+		update_combat_state()
+
+	# V键触发斩击 (保持不变，用于强制触发)
+	if Input.is_action_just_pressed("slash_attack"):
+		animation_player.play("slash", -1, 1.0) # 暂时把速度改慢
+		weapon_handler.slash_attack()
+		update_combat_state()
 
 	# --- Debug: 受伤测试 (保留) ---
 	if Input.is_action_just_pressed("debug_hurt"):
@@ -235,7 +246,6 @@ func _physics_process(delta: float) -> void:
 # 更新战斗状态辅助函数
 func update_combat_state():
 	last_combat_time = Time.get_ticks_msec() / 1000.0
-
 # --- 6. 生命值函数 ---
 			
 func take_damage(amount: int):
