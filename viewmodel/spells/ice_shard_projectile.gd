@@ -16,8 +16,10 @@ func _on_body_entered(body):
 		body.take_damage(damage)
 	
 	# 施加减速
+	# 只有当撞到的东西(body)有 apply_slow 这个方法时才调用
 	if body.has_method("apply_slow"):
 		body.apply_slow(slow_percent, slow_duration)
+		print("已对敌人施加减速效果！")
 		
 	queue_free() # 命中后销毁
 
