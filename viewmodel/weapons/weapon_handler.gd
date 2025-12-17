@@ -2,6 +2,7 @@ extends Node2D
 
 # 预加载投射物资源
 const FIREBALL_PROJECTILE = preload("res://viewmodel/spells/fireball_projectile.tscn")
+const ICE_SHARD_PROJECTILE = preload("res://viewmodel/spells/ice_shard_projectile.tscn")
 
 # --- 资源变量 ---
 # [重要] 这是一个模版资源！不要直接修改它。
@@ -22,6 +23,14 @@ var slash_cooldown: float = 0.15   # 需求：0.15秒极速间隔
 var slash_crit_rate: float = 0.3   # 需求：+0.3 暴击率 (30%)
 var slash_mana_cost: int = 5       # 需求：耗蓝 5
 var slash_damage: int = 20         # 设定一个基础伤害值
+
+# 法术冷却
+var base_spell_cooldown: float = 0.2
+var last_spell_cast_time: float = -10.0
+var current_spell_cooldown: float = 0.0
+
+# 斩击附魔伤害缓存
+var current_slash_extra_damage: int = 0
 
 # 获取 Hitbox 节点引用
 @onready var melee_hitbox: Area2D = get_node_or_null("MeleeHitbox")
@@ -54,6 +63,9 @@ func _ready():
 
 # --- 物理帧更新：添加强力调试 --- 
 func _physics_process(delta): 
+	# 请求重绘 (用于可视化 Hitbox)
+	queue_redraw()
+
 	# 仅在判定框开启时检测 
 	if slash_hitbox and slash_hitbox.monitoring: 
 		# 这是一个强力函数，直接获取当前重叠的所有物体 
@@ -62,11 +74,46 @@ func _physics_process(delta):
 		if bodies.size() > 0: 
 			print("DEBUG: 物理引擎检测到了重叠物体! 数量: ", bodies.size()) 
 			for b in bodies: 
-				print(" - 重叠物体: ", b.name, " | 层级: ", b.collision_layer) 
+				var layer_info = "N/A"
+				if "collision_layer" in b:
+					layer_info = str(b.collision_layer)
+				print(" - 重叠物体: ", b.name, " | 层级: ", layer_info) 
 		else: 
 			# 如果这一行疯狂打印，说明红框虽然看见了，但物理上它是空的 
 			# print("DEBUG: 判定框开启中，但没有检测到任何物体...") 
 			pass
+
+# --- 绘制调试形状 ---
+func _draw():
+	# 如果不在编辑器调试模式下，可以注释掉这两行来关闭显示
+	if melee_hitbox and melee_hitbox.monitoring:
+		_draw_hitbox(melee_hitbox, Color(1, 0, 0, 0.5)) # 红色半透明
+	
+	if slash_hitbox and slash_hitbox.monitoring:
+		_draw_hitbox(slash_hitbox, Color(0, 0, 1, 0.5)) # 蓝色半透明
+
+func _draw_hitbox(area: Area2D, color: Color):
+	var collider = area.get_node_or_null("CollisionShape2D")
+	if not collider or not collider.shape:
+		return
+		
+	var shape = collider.shape
+	# 计算变换矩阵：WeaponHandler -> Area2D -> CollisionShape2D
+	# 我们需要相对于 WeaponHandler (当前节点) 的变换
+	var trans = area.transform * collider.transform
+	
+	draw_set_transform_matrix(trans)
+	
+	if shape is RectangleShape2D:
+		draw_rect(Rect2(-shape.size / 2, shape.size), color, true)
+	elif shape is CircleShape2D:
+		draw_circle(Vector2.ZERO, shape.radius, color)
+	elif shape is CapsuleShape2D:
+		# 简单画个矩形代表胶囊体范围
+		draw_rect(Rect2(-shape.radius, -shape.height / 2, shape.radius * 2, shape.height), color, true)
+		
+	# 重置变换
+	draw_set_transform_matrix(Transform2D.IDENTITY)
 
 # --- 核心功能：初始化武器 ---
 # 当你需要换武器时，也可以调用这个函数传入新的武器资源
@@ -108,6 +155,11 @@ func attack():
 	if not runtime_weapon:
 		return
 
+	# --- 法术冷却检查 ---
+	var current_time = Time.get_ticks_msec() / 1000.0
+	if current_time - last_spell_cast_time < current_spell_cooldown:
+		return
+
 	if runtime_weapon.slots.is_empty():
 		print("WeaponHandler: Weapon has no slots!")
 		return
@@ -140,6 +192,20 @@ func attack():
 	# 注意：这里的 slots 数组里装的是 SpellSlot 资源 (如 SpellSlot 或 DoubleSlot)
 	var current_slot = runtime_weapon.slots[current_slot_index]
 	
+	# --- 计算下一次冷却时间 ---
+	var spells = []
+	if current_slot.has_method("get_equipped_spells"):
+		spells = current_slot.get_equipped_spells()
+	
+	var reduction = 0.0
+	if not spells.is_empty() and spells[0] is Spell:
+		reduction = spells[0].cooldown_reduction
+		
+	# 设定冷却时间 (最少 0.05 秒)
+	current_spell_cooldown = max(0.05, base_spell_cooldown - reduction)
+	last_spell_cast_time = current_time
+	# ------------------------
+
 	# 2. 计算蓝耗 (让槽位自己算，因为双发槽可能耗蓝更多)
 	var mana_cost = 0
 	if current_slot.has_method("get_total_mana_cost"):
@@ -200,6 +266,21 @@ func spawn_projectile(spell_data: Spell, offset: Vector2 = Vector2.ZERO, modifie
 			# 添加到场景
 			get_tree().current_scene.add_child(projectile)
 
+		"ice_shard":
+			var projectile = ICE_SHARD_PROJECTILE.instantiate()
+			
+			var mouse_pos = get_global_mouse_position()
+			var direction = (mouse_pos - global_position).normalized()
+			
+			projectile.global_position = global_position + offset
+			projectile.rotation = direction.angle()
+			projectile.velocity = direction * 1200 
+			
+			if modifiers.has("damage_multiplier"):
+				projectile.damage = int(projectile.damage * modifiers["damage_multiplier"])
+			
+			get_tree().current_scene.add_child(projectile)
+
 		"flame_buff":
 			print("WeaponHandler: Cast Buff!")
 			# 这里写 Buff 逻辑
@@ -238,10 +319,55 @@ func can_slash() -> bool:
 	var current_time = Time.get_ticks_msec() / 1000.0
 	return current_time - last_slash_time >= slash_cooldown
 
+# [新增] 辅助函数：寻找下一个有效槽位索引
+func _get_next_valid_slot_index() -> int:
+	if not runtime_weapon or runtime_weapon.slots.is_empty():
+		return -1
+		
+	for i in range(runtime_weapon.slots.size()):
+		var idx = (current_slot_index + i) % runtime_weapon.slots.size()
+		var slot = runtime_weapon.slots[idx]
+		
+		if slot.has_method("get_equipped_spells") and not slot.get_equipped_spells().is_empty():
+			return idx
+	return -1
+
+# [新增] 预览下一次斩击的蓝耗
+func get_next_spell_cost() -> int:
+	var idx = _get_next_valid_slot_index()
+	if idx == -1:
+		return -1 # 表示没有可用法术
+		
+	var slot = runtime_weapon.slots[idx]
+	if slot.has_method("get_total_mana_cost"):
+		return slot.get_total_mana_cost()
+	return 0
+
 # 2. [执行] 真的砍出去了：只负责重置冷却、发信号
 # 注意：调用这个之前，Player 必须保证已经扣完蓝了
 func execute_slash():
 	last_slash_time = Time.get_ticks_msec() / 1000.0
+	
+	# --- 附魔逻辑：使用当前有效槽位的所有法术 ---
+	current_slash_extra_damage = 0
+	
+	var idx = _get_next_valid_slot_index()
+	if idx != -1:
+		var slot = runtime_weapon.slots[idx]
+		
+		# 累加槽位内所有法术的伤害 (支持双发槽)
+		if slot.has_method("get_equipped_spells"):
+			var spells = slot.get_equipped_spells()
+			for spell in spells:
+				if spell:
+					current_slash_extra_damage += spell.damage
+					
+		print("Slash imbued from slot ", idx, " (+", current_slash_extra_damage, " dmg)")
+		
+		# 消耗掉这个槽位（索引移到下一位）
+		current_slot_index = (idx + 1) % runtime_weapon.slots.size()
+	# --------------------------------------------
+	
 	print("WeaponHandler: Slash executed! (CD reset)")
 	EventBus.emit_signal("player_slash_attacked")
 
@@ -259,14 +385,19 @@ func set_hitbox_monitoring(enabled: bool):
 # --- 4. 判定框控制 (保持不变) ---
 func set_slash_hitbox_monitoring(enabled: bool):
 	if slash_hitbox:
-		slash_hitbox.monitoring = enabled
+		slash_hitbox.set_deferred("monitoring", enabled)
+		# 强制更新一次重绘，以便调试框能及时显示/消失
+		queue_redraw()
 
 func _on_melee_hitbox_body_entered(body: Node2D):
 	if not runtime_weapon: return
 	
 	if body.has_method("take_damage"):
-		print("WeaponHandler: Hit enemy ", body.name)
-		body.take_damage(runtime_weapon.melee_damage)
+		# 基础伤害 + 附魔伤害 (如果第一段攻击也触发了附魔)
+		var final_damage = runtime_weapon.melee_damage + current_slash_extra_damage
+		
+		print("WeaponHandler: Hit enemy ", body.name, " Damage: ", final_damage)
+		body.take_damage(final_damage)
 
 # --- 3. 碰撞回调 (处理伤害与暴击) ---
 func _on_slash_hitbox_body_entered(body: Node2D):
@@ -275,7 +406,8 @@ func _on_slash_hitbox_body_entered(body: Node2D):
 		return
 
 	if body.has_method("take_damage"):
-		var final_damage = slash_damage
+		# 基础伤害 + 附魔伤害
+		var final_damage = slash_damage + current_slash_extra_damage
 		
 		# C. 暴击逻辑 (需求：+0.3 暴击)
 		if randf() < slash_crit_rate:

@@ -1,4 +1,4 @@
-[gd_scene load_steps=67 format=3 uid="uid://cpe4r3cy0a6en"]
+[gd_scene load_steps=68 format=3 uid="uid://cpe4r3cy0a6en"]
 
 [ext_resource type="Script" uid="uid://bubv1hogd27m1" path="res://viewmodel/entities/player.gd" id="1_onrkg"]
 [ext_resource type="Script" uid="uid://iengamu6c1u2" path="res://viewmodel/weapons/weapon_handler.gd" id="3_a6yy2"]
@@ -19,6 +19,9 @@ size = Vector2(52, 100)
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_biy1m"]
 size = Vector2(168, 126)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_lscac"]
+size = Vector2(202, 126)
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_pdcyf"]
 atlas = ExtResource("6_vhlo5")
@@ -255,7 +258,7 @@ animations = [{
 "duration": 1.0,
 "texture": SubResource("AtlasTexture_mp8bq")
 }, {
-"duration": 3.0,
+"duration": 4.0,
 "texture": SubResource("AtlasTexture_dr0ky")
 }],
 "loop": false,
@@ -440,6 +443,13 @@ position = Vector2(52, 55)
 shape = SubResource("RectangleShape2D_biy1m")
 debug_color = Color(1, 0, 0, 0.3019608)
 
+[node name="SlashHitbox" type="Area2D" parent="WeaponHandler"]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="WeaponHandler/SlashHitbox"]
+position = Vector2(35, 55)
+shape = SubResource("RectangleShape2D_lscac")
+debug_color = Color(0.9529412, 0, 0.5568628, 0.22352941)
+
 [node name="Camera2D" type="Camera2D" parent="."]
 position = Vector2(0, 6)
 script = ExtResource("5_biy1m")
@@ -447,4 +457,6 @@ script = ExtResource("5_biy1m")
 [node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="."]
 scale = Vector2(3, 3)
 sprite_frames = SubResource("SpriteFrames_dr0ky")
-animation = &"death"
+animation = &"attack2"
+frame = 5
+frame_progress = 1.0

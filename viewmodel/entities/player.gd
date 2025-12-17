@@ -27,7 +27,7 @@ var is_dead: bool = false
 @export var max_normal_mana: int = 100
 # 浓缩蓝量上限为 50
 @export var max_condensed_mana: int = 50
-@export var normal_mana_regen_rate: float = 10.0  # 回普通蓝速度
+@export var normal_mana_regen_rate: float = 20.0  # 回普通蓝速度
 @export var condensed_mana_regen_rate: float = 6.0  # 回浓缩蓝速度
 var normal_mana: float = 100.0
 var condensed_mana: float = 50.0
@@ -64,21 +64,10 @@ func _ready():
 	emit_mana_signal()
 
 func _on_animation_finished():
-	if animated_sprite.animation == "attack":
-		# 普通攻击动画结束，关闭普通攻击 Hitbox
-		if weapon_handler:
-			weapon_handler.set_hitbox_monitoring(false)
-		# 强制切换回 idle，防止卡在攻击状态
-		animated_sprite.play("idle")
+	# 连击系统接管了 attack 和 attack2 的结束逻辑，这里不再处理
+	# 除非被打断导致状态不一致，这里可以作为保底
 	
-	elif animated_sprite.animation == "attack2":
-		# 斩击动画结束，关闭斩击 Hitbox
-		if weapon_handler:
-			weapon_handler.set_slash_hitbox_monitoring(false)
-		# 强制切换回 idle，防止卡在攻击状态
-		animated_sprite.play("idle")
-	
-	elif animated_sprite.animation == "turn":
+	if animated_sprite.animation == "turn":
 		# [关键修复] 转身动画播放完毕后，手动更新翻转状态
 		animated_sprite.flip_h = not animated_sprite.flip_h
 		
@@ -90,6 +79,8 @@ func _on_animation_finished():
 			
 	elif animated_sprite.animation == "hit":
 		# 受伤动画结束，恢复待机
+		# 确保重置攻击状态
+		attack_state = 0
 		animated_sprite.play("idle")
 		
 	elif animated_sprite.animation == "death":
@@ -224,27 +215,22 @@ func _physics_process(delta: float) -> void:
 		weapon_handler.attack()
 		update_combat_state() # 记录攻击时间
 
-	# --- 左键逻辑 ---
-	if Input.is_action_pressed("melee_attack"):
-		# 尝试执行斩击
-		var slash_success = try_execute_slash_attack()
-		
-		# [关键]：只有当 slash_success 为 false (没蓝或CD中) 时，
-		# 并且是“刚刚按下”(点击) 时，才转为普攻。
-		if not slash_success and Input.is_action_just_pressed("melee_attack"):
-			print("蓝量不足或冷却中，转为普通攻击")
-			# 执行普攻逻辑
-			if animated_sprite:
-				animated_sprite.play("attack")
-			weapon_handler.set_hitbox_monitoring(true)
-			weapon_handler.melee_attack()
-			update_combat_state()
+	# --- 左键逻辑 (连击系统) ---
+	if Input.is_action_just_pressed("melee_attack"):
+		if attack_state == 0:
+			# 起手：第一段攻击
+			perform_attack_1()
+		elif attack_state == 1 and is_in_combo_window:
+			# 连击缓冲
+			queued_combo = true
+			print("Combo queued!")
 
 	# --- V键逻辑：强制斩击 ---
 	if Input.is_action_pressed("slash_attack"):
 		# 直接尝试执行，不需要额外逻辑，因为 try_execute_slash_attack 内部已经处理了蓝量和CD
-		if try_execute_slash_attack():
-			pass # 成功斩击
+		if attempt_slash_imbue():
+			if animated_sprite: animated_sprite.play("attack2")
+			perform_slash_logic()
 		else:
 			# 可选：如果按V但没蓝或CD中，这里可以加提示
 			pass
@@ -257,9 +243,92 @@ func _physics_process(delta: float) -> void:
 func update_combat_state():
 	last_combat_time = Time.get_ticks_msec() / 1000.0
 
+# --- 连击系统变量 ---
+var attack_state: int = 0 # 0: None, 1: Attack1, 2: Attack2
+var is_in_combo_window: bool = false
+var queued_combo: bool = false
+
+# --- 连击第一段：普攻 ---
+func perform_attack_1():
+	attack_state = 1
+	is_in_combo_window = false
+	queued_combo = false
+	update_combat_state()
+	
+	# 尝试附魔 (第一段也享受附魔)
+	if attempt_slash_imbue():
+		print("连击1：强化斩击！")
+	else:
+		print("连击1：普通斩击 (无附魔)")
+	
+	# 播放普攻
+	if animated_sprite:
+		animated_sprite.play("attack")
+	
+	# 延迟 1 帧 (15fps) = 0.067s 开启判定
+	await get_tree().create_timer(0.067).timeout
+	if attack_state != 1: return # 防止被打断后依然开启判定
+	
+	# 开启 MeleeHitbox 判定
+	weapon_handler.set_hitbox_monitoring(true)
+	
+	# 开启连击窗口 (从判定框出现开始即可连击)
+	is_in_combo_window = true
+	
+	# 判定框持续 2 帧 (15fps) = 0.133s
+	await get_tree().create_timer(0.133).timeout
+	weapon_handler.set_hitbox_monitoring(false)
+	
+	# 再等待剩余动画时间 (凑够约 0.4s 总时长)
+	# 目前已过 0.067 + 0.133 = 0.2s
+	# 再等 0.2s
+	await get_tree().create_timer(0.2).timeout
+	if attack_state != 1: return
+	
+	is_in_combo_window = false
+	
+	if queued_combo:
+		perform_attack_2()
+	else:
+		# 结束攻击
+		attack_state = 0
+		if animated_sprite: animated_sprite.play("idle")
+
+# --- 连击第二段：强化斩击 ---
+func perform_attack_2():
+	attack_state = 2
+	queued_combo = false
+	update_combat_state()
+	
+	# 尝试附魔
+	if attempt_slash_imbue():
+		print("连击：强化斩击！")
+	else:
+		print("连击：普通斩击 (无附魔)")
+	
+	# 无论是否附魔，都播放 attack2 动作
+	if animated_sprite:
+		animated_sprite.play("attack2")
+	
+	# 开启判定框 (注意：如果没有附魔，weapon_handler 里只会造成基础伤害)
+	# 延迟 2 帧 (15fps) = 0.133s
+	perform_slash_logic(0.133)
+	
+	# 等待动画结束 (假设也是 0.4s)
+	await get_tree().create_timer(0.4).timeout
+	if attack_state != 2: return
+	
+	# 连击结束
+	attack_state = 0
+	if animated_sprite: animated_sprite.play("idle")
+
 # --- 辅助函数：手动控制判定时机 ---
-func perform_slash_logic():
+func perform_slash_logic(delay: float = 0.0):
+	if delay > 0:
+		await get_tree().create_timer(delay).timeout
+
 	# 立即开启判定框
+	print("DEBUG: 开启斩击判定框 (Delay: ", delay, ")")
 	weapon_handler.set_slash_hitbox_monitoring(true)
 	
 	# 等待一小段时间 (例如 0.1秒) 后关闭
@@ -267,29 +336,34 @@ func perform_slash_logic():
 	await get_tree().create_timer(0.1).timeout
 	
 	# 关闭判定框
+	print("DEBUG: 关闭斩击判定框")
 	weapon_handler.set_slash_hitbox_monitoring(false)
 
-# --- 辅助函数：执行斩击攻击 (返回是否成功) ---
-# --- 修复后的通用斩击逻辑 ---
-func try_execute_slash_attack() -> bool:
+# --- 辅助函数：尝试附魔 (纯逻辑) ---
+func attempt_slash_imbue() -> bool:
 	# 1. 第一关：问武器"冷却好了吗？"
+	# 注意：连击本身有间隔，这里可以放宽冷却检查，或者保留以防止V键滥用
 	if not weapon_handler.can_slash():
-		return false # 冷却没好，直接视为失败，不扣蓝
+		return false 
 	
 	# 2. 第二关：尝试扣费
-	# try_consume_mana 内部会自动判断够不够、够了就扣、不够回false
-	if not try_consume_mana(5, "melee"):
-		return false # 没钱（蓝不够），直接视为失败
-		
-	# --- 3. 只有前两关都过了，才真正动手 ---
+	var cost = weapon_handler.get_next_spell_cost()
+	if cost == -1: return false # 无可用法术
 	
-	# A. 通知武器"即使生效" (重置冷却)
+	if not try_consume_mana(cost, "melee"):
+		return false # 没蓝
+		
+	# 3. 执行附魔
 	weapon_handler.execute_slash()
-	
-	# B. 播放动画 (既然你已经修好了抽搐问题，就用你现在的播放方式)
-	if animated_sprite:
-		
-		animated_sprite.play("attack2")
+	return true
+
+# --- 旧函数保留但改名 (为了兼容性，或者直接删除) ---
+func try_execute_slash_attack() -> bool:
+	if attempt_slash_imbue():
+		if animated_sprite: animated_sprite.play("attack2")
+		perform_slash_logic()
+		return true
+	return false
 		
 	# C. 开启判定框
 	perform_slash_logic()
@@ -311,6 +385,12 @@ func take_damage(amount: int):
 		# 如果正在攻击，强制打断
 		if weapon_handler:
 			weapon_handler.set_hitbox_monitoring(false)
+			weapon_handler.set_slash_hitbox_monitoring(false)
+		
+		# 重置连击状态
+		attack_state = 0
+		is_in_combo_window = false
+		queued_combo = false
 			
 		# 2. 闪白/变色反馈 (使用 Tween)
 		# 瞬间变红，然后0.2秒内变回原色

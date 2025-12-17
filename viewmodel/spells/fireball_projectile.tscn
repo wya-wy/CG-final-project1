@@ -1,25 +1,7 @@
-[gd_scene load_steps=68 format=3 uid="uid://co7hyl252x4h8"]
+[gd_scene load_steps=65 format=3 uid="uid://co7hyl252x4h8"]
 
 [ext_resource type="Script" uid="uid://b37kak02m8x62" path="res://viewmodel/spells/fireball_projectile.gd" id="1_yes51"]
 [ext_resource type="Texture2D" uid="uid://yev8td8s0jyr" path="res://assets/projectiles/Fires/Fireball_68x9.png" id="2_kc0rs"]
-
-[sub_resource type="Gradient" id="Gradient_fire"]
-offsets = PackedFloat32Array(0, 0, 1)
-colors = PackedColorArray(1, 0.8, 0, 1, 1, 0.2, 0, 0.5, 0.2, 0.2, 0.2, 0)
-
-[sub_resource type="GradientTexture1D" id="GradientTexture1D_fire"]
-gradient = SubResource("Gradient_fire")
-
-[sub_resource type="ParticleProcessMaterial" id="ParticleProcessMaterial_fire"]
-particle_flag_disable_z = true
-direction = Vector3(-1, 0, 0)
-spread = 15.0
-initial_velocity_min = 100.0
-initial_velocity_max = 200.0
-gravity = Vector3(0, 0, 0)
-scale_min = 5.0
-scale_max = 10.0
-color_ramp = SubResource("GradientTexture1D_fire")
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_hutsr"]
 atlas = ExtResource("2_kc0rs")
@@ -459,18 +441,13 @@ collision_layer = 2
 collision_mask = 4
 script = ExtResource("1_yes51")
 
-[node name="GPUParticles2D" type="GPUParticles2D" parent="."]
-amount = 30
-lifetime = 0.5
-local_coords = true
-process_material = SubResource("ParticleProcessMaterial_fire")
-
 [node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="."]
+z_index = 2
 rotation = 3.1415927
 scale = Vector2(2, 2)
 sprite_frames = SubResource("SpriteFrames_fire")
 autoplay = "default"
-frame_progress = 0.39344102
+frame_progress = 0.91098046
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="."]
 position = Vector2(57, 0)

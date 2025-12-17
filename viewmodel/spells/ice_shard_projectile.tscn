@@ -442,18 +442,20 @@ collision_mask = 4
 script = ExtResource("1_v3i4u")
 
 [node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="."]
+z_index = 2
 rotation = 3.1415927
 scale = Vector2(2, 2)
 sprite_frames = SubResource("SpriteFrames_gf5sg")
 autoplay = "default"
+frame_progress = 0.2803044
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="."]
 position = Vector2(72, 0)
 shape = SubResource("CapsuleShape2D_pj68t")
 
 [node name="VisibleOnScreenNotifier2D" type="VisibleOnScreenNotifier2D" parent="."]
-position = Vector2(-11, 0)
-rect = Rect2(6, -4, 10, 7)
+position = Vector2(0, 0)
+rect = Rect2(-100, -50, 200, 100)
 
 [connection signal="body_entered" from="." to="." method="_on_body_entered"]
 [connection signal="screen_exited" from="VisibleOnScreenNotifier2D" to="." method="_on_visible_on_screen_notifier_2d_screen_exited"]

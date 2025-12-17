@@ -50,6 +50,7 @@ debug_generation = true
 z_index = 8
 scale = Vector2(1, 1)
 collision_layer = 2
+condensed_mana_regen_rate = 10.0
 debug_infinite_air_jump = true
 
 [node name="MenuLayer" type="CanvasLayer" parent="."]
