@@ -93,11 +93,33 @@ func _gui_input(event):
 
 func _on_right_click():
 	if not current_slot_data: return
-	
-	print("UI: 右键点击，清空槽位 ", slot_index)
-	
-	# 1. 清空数据
-	current_slot_data.clear_slot()
-	
-	# 2. 刷新界面
-	refresh_visuals()
+
+	# 检查是否是特殊法术槽
+	if is_special_slot(current_slot_data):
+		print("UI: 右键点击，移除特殊槽位 ", slot_index)
+		
+		# 1. 移除特殊法术槽
+		if weapon_handler_ref and weapon_handler_ref.has_method("remove_special_slot"):
+			var success = weapon_handler_ref.remove_special_slot(slot_index)
+			if success:
+				# 更新本地引用
+				current_slot_data = weapon_handler_ref.runtime_weapon.slots[slot_index]
+				slot_name_label.text = current_slot_data.slot_name
+				# 2. 刷新界面
+				refresh_visuals()
+				print("UI: 特殊槽位移除成功！")
+			else:
+				print("UI: 特殊槽位移除失败！")
+	else:
+		print("UI: 右键点击，清空槽位 ", slot_index)
+
+		# 1. 清空数据
+		current_slot_data.clear_slot()
+
+		# 2. 刷新界面
+		refresh_visuals()
+
+func is_special_slot(slot: SpellSlot) -> bool:
+	# 判断法术槽是否是特殊类型
+	# 这里假设基础法术槽的类名是 SpellSlot
+	return slot.get_class() != "SpellSlot"
