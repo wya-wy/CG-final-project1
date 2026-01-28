@@ -47,21 +47,42 @@ func _can_drop_data(at_position: Vector2, data: Variant) -> bool:
 		# 还可以检查容量是否满了
 		if current_slot_data.get_equipped_spells().size() < current_slot_data.capacity:
 			return true
+	# 检查数据是不是 SpellSlotItem 类型
+	elif data is SpellSlotItem:
+		# 法术槽装备总是可以替换
+		return true
 	return false
 
 # 2. 执行放置：当鼠标松开时调用
 func _drop_data(at_position: Vector2, data: Variant):
 	if not weapon_handler_ref: return
 	
-	var spell = data as Spell
-	
-	print("UI: 试图将 ", spell.spell_name, " 放入槽位 ", slot_index)
-	
-	# 调用我们之前写好的 WeaponHandler 接口！
-	weapon_handler_ref.install_spell(slot_index, spell)
-	
-	# 刷新 UI 显示
-	refresh_visuals()
+	if data is Spell:
+		var spell = data as Spell
+		print("UI: 试图将 ", spell.spell_name, " 放入槽位 ", slot_index)
+		# 调用我们之前写好的 WeaponHandler 接口！
+		weapon_handler_ref.install_spell(slot_index, spell)
+		# 刷新 UI 显示
+		refresh_visuals()
+	elif data is SpellSlotItem:
+		var slot_item = data as SpellSlotItem
+		print("UI: 试图将 ", slot_item.slot_name, " 替换槽位 ", slot_index)
+		# 执行槽位替换
+		replace_slot(slot_item)
+
+# 替换槽位
+func replace_slot(slot_item: SpellSlotItem):
+	# 调用 WeaponHandler 的替换方法
+	if weapon_handler_ref.has_method("replace_slot"):
+		var success = weapon_handler_ref.replace_slot(slot_index, slot_item)
+		if success:
+			# 更新本地引用
+			current_slot_data = weapon_handler_ref.runtime_weapon.slots[slot_index]
+			slot_name_label.text = current_slot_data.slot_name
+			refresh_visuals()
+			print("UI: 槽位替换成功！")
+		else:
+			print("UI: 槽位替换失败！")
 
 # --- 处理鼠标点击 ---
 func _gui_input(event):

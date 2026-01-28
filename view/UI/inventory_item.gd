@@ -2,24 +2,34 @@
 extends TextureRect
 class_name InventoryItem
 
-# 这个格子代表的法术数据
-var spell_data: Spell
+# 这个格子代表的数据
+var item_data: Variant
 
-func setup(spell: Spell):
-	spell_data = spell
-	# 如果法术资源配置了图标，则使用配置的图标，否则使用默认占位图
-	if spell.icon:
-		texture = spell.icon
-	else:
-		texture = preload("res://icon.svg") # 临时占位图
+func setup(item: Variant):
+	item_data = item
 	
-	# 如果想显示法术名字作为提示
-	tooltip_text = spell.spell_name
+	# 处理不同类型的数据
+	if item is Spell:
+		var spell = item as Spell
+		if spell.icon:
+			texture = spell.icon
+		else:
+			texture = preload("res://icon.svg") # 临时占位图
+		# 如果想显示法术名字作为提示
+		tooltip_text = spell.spell_name
+	elif item is SpellSlotItem:
+		var slot_item = item as SpellSlotItem
+		if slot_item.icon:
+			texture = slot_item.icon
+		else:
+			texture = preload("res://icon.svg") # 临时占位图
+		# 如果想显示法术槽名字作为提示
+		tooltip_text = slot_item.slot_name
 
 # --- 核心：Godot 拖拽逻辑 ---
 # 当玩家在这个控件上按住鼠标移动时触发
 func _get_drag_data(at_position: Vector2):
-	if not spell_data:
+	if not item_data:
 		return null
 		
 	# 1. 创建拖拽预览（跟随后标的小图标）
@@ -39,5 +49,4 @@ func _get_drag_data(at_position: Vector2):
 	
 	# 2. 返回“数据”
 	# 这个数据会被传递给 _can_drop_data 和 _drop_data
-	# 我们直接把 Spell 资源传过去
-	return spell_data
+	return item_data

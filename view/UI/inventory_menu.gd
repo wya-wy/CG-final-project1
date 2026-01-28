@@ -8,15 +8,17 @@ const ITEM_UI_SCENE = preload("res://view/UI/InventoryItem.tscn")
 @onready var slots_container: VBoxContainer = $HBoxContainer/SlotsContainer
 @onready var inventory_grid: GridContainer = $HBoxContainer/CenterContainer/InventoryGrid
 
-# 模拟玩家拥有的法术池（实际开发中应该从 PlayerInventory 单例读取）
-var available_spells: Array[Spell] = []
+# 模拟玩家拥有的物品池（实际开发中应该从 PlayerInventory 单例读取）
+var available_items: Array[Variant] = []
 
 func _ready():
 	# --- 临时测试数据 ---
 	# 加载几个法术资源放入背包
 	visible = false 
-	available_spells.append(load("res://viewmodel/spells/fireball.tres"))
-	available_spells.append(load("res://viewmodel/spells/ice_shard.tres"))
+	available_items.append(load("res://viewmodel/spells/fireball.tres"))
+	available_items.append(load("res://viewmodel/spells/ice_shard.tres"))
+	# 加载法术槽装备
+	available_items.append(load("res://viewmodel/items/double_slot_item.tres"))
 	
 	# 初始化背包显示
 	_init_inventory_grid()
@@ -34,10 +36,10 @@ func _init_inventory_grid():
 		child.queue_free()
 		
 	# 生成格子
-	for spell in available_spells:
-		var item = ITEM_UI_SCENE.instantiate()
-		inventory_grid.add_child(item)
-		item.setup(spell)
+	for item in available_items:
+		var item_ui = ITEM_UI_SCENE.instantiate()
+		inventory_grid.add_child(item_ui)
+		item_ui.setup(item)
 
 func _init_weapon_slots(handler):
 	# 清空
